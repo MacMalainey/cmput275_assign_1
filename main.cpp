@@ -13,8 +13,8 @@
 
 // Project includes
 #include "lcd_image.h"
-#include "config.hpp"
-#include "types.hpp"
+#include "config.h"
+#include "types.h"
 
 MCUFRIEND_kbv tft;
 
@@ -71,6 +71,35 @@ void setup() {
   cursorY = DISPLAY_HEIGHT/2;
 
   redrawCursor(TFT_RED);
+}
+
+controlInput processInput() {
+
+  controlInput input;
+
+  // Read joystick input
+  input.joyX = analogRead(JOY_HORIZ);
+  input.joyY = analogRead(JOY_VERT);
+  input.joyButton = digitalRead(JOY_SEL);
+
+  TSPoint touch = ts.getPoint();
+
+  // Reset pins from getPoint()
+  pinMode(YP, OUTPUT); 
+  pinMode(XM, OUTPUT);
+
+  if (touch.z > MINPRESSURE && touch.z < MAXPRESSURE)
+  {
+    input.isTouch = true;
+
+    // We only care about doing the work to properly init the touch vars
+    // if we have a confirmed touch
+    input.touchX = map(touch.y, TS_MINX, TS_MAXX, 480, 0);
+    input.touchY = map(touch.x, TS_MINY, TS_MAXY, 320, 0);
+  }
+  else input.isTouch = false;
+
+  return input;
 }
 
 void redrawCursor(uint16_t colour) {
