@@ -18,10 +18,7 @@
 
 MCUFRIEND_kbv tft;
 
-lcd_image_t yegImage = { "yeg-big.lcd", YEG_SIZE, YEG_SIZE };
-
-// the cursor position on the display
-int cursorX, cursorY;
+const lcd_image_t yegImage = { "yeg-big.lcd", YEG_SIZE, YEG_SIZE };
 
 // a multimeter reading says there are 300 ohms of resistance across the plate,
 // so initialize with this to get more accurate readings
@@ -42,8 +39,8 @@ void setup() {
 
 	//    tft.reset();             // hardware reset
   uint16_t ID = tft.readID();    // read ID from display
-  Serial.print("ID = 0x");
-  Serial.println(ID, HEX);
+  // Serial.print("ID = 0x");
+  // Serial.println(ID, HEX);
   // if (ID == 0xD3D3) ID = 0x9481; // write-only shield
   
   // must come before SD.begin() ...
@@ -60,20 +57,12 @@ void setup() {
 
   tft.fillScreen(TFT_BLACK);
 
-  // draws the centre of the Edmonton map, leaving the rightmost 60 columns black
-	int yegMiddleX = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
-	int yegMiddleY = YEG_SIZE/2 - DISPLAY_HEIGHT/2;
-	// lcd_image_draw(&yegImage, &tft, yegMiddleX, yegMiddleY,
-  //                0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
+  // TODO: Move to another screen
 
-  // initial cursor position is the middle of the screen
-  cursorX = (DISPLAY_WIDTH - 60)/2;
-  cursorY = DISPLAY_HEIGHT/2;
-
-  redrawCursor(TFT_RED);
+  // redrawCursor(TFT_RED);
 }
 
-controlInput processInput() {
+controlInput recordInput() {
 
   controlInput input;
 
@@ -103,6 +92,8 @@ controlInput processInput() {
 }
 
 void redrawCursor(uint16_t colour) {
+  int cursorY;
+  int cursorX;
   tft.fillRect(cursorX - CURSOR_SIZE/2, cursorY - CURSOR_SIZE/2,
                CURSOR_SIZE, CURSOR_SIZE, colour);
 }
@@ -125,34 +116,26 @@ void redrawImage(int x, int y, int size) {
 
 }
 
-void processJoystick() {
-  int xVal = analogRead(JOY_HORIZ);
-  int yVal = analogRead(JOY_VERT);
-  int buttonVal = digitalRead(JOY_SEL);
+void processJoystick(int x, int y) {
 
-  // Removed drawing a black box in old cursor position
-  // as it is not necessary anymore
-
-  // Changed cursor movement code
-  int preX = cursorX;
-  int preY = cursorY;
+  int cursorY;
+  int cursorX;
 
   // Check if joystick is getting pushed
-  if (abs(yVal - JOY_CENTER) > JOY_DEADZONE) {
-    cursorY += map(yVal, 0, 1024, -MAX_CURSOR_SPEED, MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
+  if (abs(y - JOY_CENTER) > JOY_DEADZONE) {
+    cursorY += map(y, 0, 1024, -MAX_CURSOR_SPEED, MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
     cursorY = constrain(cursorY, CURSOR_SIZE/2, DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1));
   }
 
   // remember the x-reading increases as we push left
-  if (abs(xVal - JOY_CENTER) > JOY_DEADZONE) {
-    cursorX += map(xVal, 0, 1024, MAX_CURSOR_SPEED, -MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
+  if (abs(x - JOY_CENTER) > JOY_DEADZONE) {
+    cursorX += map(x, 0, 1024, MAX_CURSOR_SPEED, -MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
     cursorX = constrain(cursorX, CURSOR_SIZE/2, DISPLAY_WIDTH - 60 - (CURSOR_SIZE/2 + 1));
   }
 
   // Draw a small patch of the Edmonton map at the old cursor position before
   // drawing a red rectangle at the new cursor position
   // if (cursorX != preX || cursorY != preY) redrawImage(preX - CURSOR_SIZE/2, preY - CURSOR_SIZE/2, CURSOR_SIZE);
-
   redrawCursor(TFT_RED);
 
   delay(20);
@@ -166,7 +149,7 @@ void processJoystick() {
  * restIndex (int): Restaurant index to grab
  * restPtr (restaurant*): Pointer to store restaurant data at
  */
-void getRestaurantFast(int restIndex, restaurant* restPtr) {
+void getRestaurant(int restIndex, restaurant* restPtr) {
   uint32_t blockNum = REST_START_BLOCK + restIndex/8;
 
   // Cache values
@@ -187,8 +170,24 @@ void getRestaurantFast(int restIndex, restaurant* restPtr) {
 int main() {
 	setup();
 
+  // Init variables
+  controlInput input;
+  cursor cur;
+
+  // initial cursor position is the middle of the screen
+  cur.x = (DISPLAY_WIDTH - 60)/2;
+  cur.y = DISPLAY_HEIGHT/2;
+
+  // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
+  int yegX = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
+	int yegY = YEG_SIZE/2 - DISPLAY_HEIGHT/2;
+	lcd_image_draw(&yegImage, &tft, yegX, yegY,
+                 0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
+
+  input = recordInput();
+
   while (true) {
-    processJoystick();
+
   }
 
 	Serial.end();
