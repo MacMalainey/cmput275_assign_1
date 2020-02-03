@@ -91,10 +91,8 @@ controlInput recordInput() {
   return input;
 }
 
-void redrawCursor(uint16_t colour) {
-  int cursorY;
-  int cursorX;
-  tft.fillRect(cursorX - CURSOR_SIZE/2, cursorY - CURSOR_SIZE/2,
+void redrawCursor(int x, int y, uint16_t colour) {
+  tft.fillRect(x - CURSOR_SIZE/2, y - CURSOR_SIZE/2,
                CURSOR_SIZE, CURSOR_SIZE, colour);
 }
 
@@ -107,38 +105,32 @@ void redrawCursor(uint16_t colour) {
  * y (int): vertical cordinate to start drawing at
  * size (int): length and width of image segment to draw
  */
-void redrawImage(int x, int y, int size) {
-  int yegMiddleX = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
-	int yegMiddleY = YEG_SIZE/2 - DISPLAY_HEIGHT/2;
+void redrawImage(int mapX, int mapY, int x, int y, int size) {
 
-  lcd_image_draw(&yegImage, &tft, yegMiddleX + x, yegMiddleY + y,
+  lcd_image_draw(&yegImage, &tft, mapX + x, mapY + y,
                  x, y, size, size);
 
 }
 
-void processJoystick(int x, int y) {
+cursor processJoystick(int x, int y, cursor last) {
 
-  int cursorY;
-  int cursorX;
+  cursor mapped;
+  mapped.x = last.x;
+  mapped.y = last.y;
 
   // Check if joystick is getting pushed
   if (abs(y - JOY_CENTER) > JOY_DEADZONE) {
-    cursorY += map(y, 0, 1024, -MAX_CURSOR_SPEED, MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
-    cursorY = constrain(cursorY, CURSOR_SIZE/2, DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1));
+    mapped.y += map(y, 0, 1024, -MAX_CURSOR_SPEED, MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
+    mapped.y = constrain(mapped.y, CURSOR_SIZE/2, DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1));
   }
 
   // remember the x-reading increases as we push left
   if (abs(x - JOY_CENTER) > JOY_DEADZONE) {
-    cursorX += map(x, 0, 1024, MAX_CURSOR_SPEED, -MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
-    cursorX = constrain(cursorX, CURSOR_SIZE/2, DISPLAY_WIDTH - 60 - (CURSOR_SIZE/2 + 1));
+    mapped.x += map(x, 0, 1024, MAX_CURSOR_SPEED, -MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
+    mapped.x = constrain(mapped.x, CURSOR_SIZE/2, DISPLAY_WIDTH - 60 - (CURSOR_SIZE/2 + 1));
   }
 
-  // Draw a small patch of the Edmonton map at the old cursor position before
-  // drawing a red rectangle at the new cursor position
-  // if (cursorX != preX || cursorY != preY) redrawImage(preX - CURSOR_SIZE/2, preY - CURSOR_SIZE/2, CURSOR_SIZE);
-  redrawCursor(TFT_RED);
-
-  delay(20);
+  return mapped;
 }
 
 /**
@@ -167,16 +159,19 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
+
+
 int main() {
 	setup();
 
   // Init variables
   controlInput input;
-  cursor cur;
+  cursor curs;
+  mapState state = MODE0;
 
   // initial cursor position is the middle of the screen
-  cur.x = (DISPLAY_WIDTH - 60)/2;
-  cur.y = DISPLAY_HEIGHT/2;
+  curs.x = (DISPLAY_WIDTH - 60)/2;
+  curs.y = DISPLAY_HEIGHT/2;
 
   // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
   int yegX = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
@@ -184,9 +179,26 @@ int main() {
 	lcd_image_draw(&yegImage, &tft, yegX, yegY,
                  0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
 
-  input = recordInput();
+  redrawCursor(curs.x, curs.y, TFT_RED);
 
   while (true) {
+
+    switch (state) {
+      case MODE0:
+      input = recordInput();
+
+      cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
+
+      if (curs.x != nCurs.x || curs.y != nCurs.y) {
+        redrawImage(yegX, yegY, curs.x - CURSOR_SIZE/2, curs.y - CURSOR_SIZE/2, CURSOR_SIZE);
+        curs = nCurs;
+      }
+      redrawCursor(curs.x, curs.y, TFT_RED);
+
+      break;
+      case MODE1:
+      break;
+    }
 
   }
 

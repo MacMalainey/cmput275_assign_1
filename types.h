@@ -26,7 +26,12 @@ typedef struct {
   int y;
 } cursor;
 
-enum state {
+typedef struct {
+  int x;
+  int y;
+} mapCords;
+
+enum mapState {
   MODE0,
   MODE1
 };
