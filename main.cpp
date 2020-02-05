@@ -16,6 +16,9 @@
 #include "config.h"
 #include "types.h"
 
+#define MAX_CURSOR_X DISPLAY_WIDTH - 60 - (CURSOR_SIZE/2 + 1)
+#define MAX_CURSOR_Y DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1)
+
 MCUFRIEND_kbv tft;
 
 const lcd_image_t yegImage = { "yeg-big.lcd", YEG_SIZE, YEG_SIZE };
@@ -121,16 +124,32 @@ cursor processJoystick(int x, int y, cursor last) {
   // Check if joystick is getting pushed
   if (abs(y - JOY_CENTER) > JOY_DEADZONE) {
     mapped.y += map(y, 0, 1024, -MAX_CURSOR_SPEED, MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
-    mapped.y = constrain(mapped.y, CURSOR_SIZE/2, DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1));
   }
 
   // remember the x-reading increases as we push left
   if (abs(x - JOY_CENTER) > JOY_DEADZONE) {
     mapped.x += map(x, 0, 1024, MAX_CURSOR_SPEED, -MAX_CURSOR_SPEED); // decrease the y coordinate of the cursor
-    mapped.x = constrain(mapped.x, CURSOR_SIZE/2, DISPLAY_WIDTH - 60 - (CURSOR_SIZE/2 + 1));
   }
 
   return mapped;
+}
+
+int sign(int x) {
+  return (x > 0) - (x < 0);
+}
+// https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
+
+bool moveMap(int deltaX, int deltaY, mapCord &cords) {
+  int nx = constrain(cords.x - (deltaX), 0, YEG_SIZE);
+  int ny = constrain(cords.y - (deltaY), 0, YEG_SIZE);
+
+  if (nx != cords.x || ny != cords.y) {
+    cords.x = nx;
+    cords.y = ny;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**
@@ -159,14 +178,13 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
-
-
 int main() {
 	setup();
 
   // Init variables
   controlInput input;
   cursor curs;
+  mapCord map;
   mapState state = MODE0;
 
   // initial cursor position is the middle of the screen
@@ -174,9 +192,9 @@ int main() {
   curs.y = DISPLAY_HEIGHT/2;
 
   // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
-  int yegX = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
-	int yegY = YEG_SIZE/2 - DISPLAY_HEIGHT/2;
-	lcd_image_draw(&yegImage, &tft, yegX, yegY,
+  map.x = YEG_SIZE/2 - (DISPLAY_WIDTH - 60)/2;
+	map.y = YEG_SIZE/2 - DISPLAY_HEIGHT/2;
+	lcd_image_draw(&yegImage, &tft, map.x, map.y,
                  0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
 
   redrawCursor(curs.x, curs.y, TFT_RED);
@@ -190,8 +208,18 @@ int main() {
       cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
 
       if (curs.x != nCurs.x || curs.y != nCurs.y) {
-        redrawImage(yegX, yegY, curs.x - CURSOR_SIZE/2, curs.y - CURSOR_SIZE/2, CURSOR_SIZE);
+        bool didMove = moveMap(MAX_CURSOR_X - max(nCurs.x, MAX_CURSOR_X), MAX_CURSOR_Y - max(nCurs.y, MAX_CURSOR_Y), map);
+        if (didMove) {
+          // The redraw helper function isn't set up for non-rectangular re-draws
+          lcd_image_draw(&yegImage, &tft, map.x, map.y,
+                 0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
+        } else {
+          // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
+          redrawImage(map.x, map.y, curs.x - CURSOR_SIZE/2, curs.y - CURSOR_SIZE/2, CURSOR_SIZE);
+        }
         curs = nCurs;
+        curs.y = constrain(curs.y, CURSOR_SIZE/2, MAX_CURSOR_Y);
+        curs.x = constrain(curs.x, CURSOR_SIZE/2, MAX_CURSOR_X);
       }
       redrawCursor(curs.x, curs.y, TFT_RED);
 
