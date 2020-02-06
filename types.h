@@ -31,6 +31,6 @@ typedef struct {
 typedef struct {
   int x;
   int y;
-} mapCords;
+} mapCord;
 
 enum mapState { MODE0, MODE1 };

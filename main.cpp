@@ -17,6 +17,10 @@
 #include "lcd_image.h"
 #include "types.h"
 
+// More defines (DO NOT SET THESE LIKE THOSE IN THE CONFIG HEADER)
+#define MAX_CURSOR_X DISPLAY_WIDTH - 60 - (CURSOR_SIZE / 2 + 1)
+#define MAX_CURSOR_Y DISPLAY_HEIGHT - (CURSOR_SIZE / 2 + 1)
+
 MCUFRIEND_kbv tft;
 
 const lcd_image_t yegImage = {"yeg-big.lcd", YEG_SIZE, YEG_SIZE};
@@ -57,8 +61,6 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
 
   // TODO: Move to another screen
-
-  // redrawCursor(TFT_RED);
 }
 
 controlInput recordInput() {
@@ -88,7 +90,7 @@ controlInput recordInput() {
   return input;
 }
 
-void redrawCursor(int x, int y, uint16_t colour) {
+void drawCursor(int x, int y, uint16_t colour) {
   tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE,
                CURSOR_SIZE, colour);
 }
@@ -116,8 +118,6 @@ cursor processJoystick(int x, int y, cursor last) {
     mapped.y +=
         map(y, 0, 1024, -MAX_CURSOR_SPEED,
             MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
-    mapped.y = constrain(mapped.y, CURSOR_SIZE / 2,
-                         DISPLAY_HEIGHT - (CURSOR_SIZE / 2 + 1));
   }
 
   // remember the x-reading increases as we push left
@@ -125,8 +125,6 @@ cursor processJoystick(int x, int y, cursor last) {
     mapped.x +=
         map(x, 0, 1024, MAX_CURSOR_SPEED,
             -MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
-    mapped.x = constrain(mapped.x, CURSOR_SIZE / 2,
-                         DISPLAY_WIDTH - 60 - (CURSOR_SIZE / 2 + 1));
   }
 
   return mapped;
@@ -135,6 +133,24 @@ cursor processJoystick(int x, int y, cursor last) {
 int calculateManhattan(restaurant* restaurantInfo, mapCords center) {
   return 0;
   // TODO: Implement.
+}
+
+int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
+// https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
+
+bool moveMap(int deltaX, int deltaY, mapCord& cords) {
+  int nx = constrain(cords.x + (deltaX) * (DISPLAY_WIDTH - 60), 0,
+                     YEG_SIZE - (DISPLAY_WIDTH - 60));
+  int ny = constrain(cords.y + (deltaY) * (DISPLAY_HEIGHT), 0,
+                     YEG_SIZE - DISPLAY_HEIGHT);
+
+  if (nx != cords.x || ny != cords.y) {
+    cords.x = nx;
+    cords.y = ny;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**
@@ -178,6 +194,7 @@ int main() {
   // Init variables
   controlInput input;
   cursor curs;
+  mapCord map;
   mapState state = MODE0;
 
   // initial cursor position is the middle of the screen
@@ -186,29 +203,43 @@ int main() {
 
   // Draws the centre of the Edmonton map, leaving the rightmost 60 columns
   // black
-  int yegX = YEG_SIZE / 2 - (DISPLAY_WIDTH - 60) / 2;
-  int yegY = YEG_SIZE / 2 - DISPLAY_HEIGHT / 2;
-  lcd_image_draw(&yegImage, &tft, yegX, yegY, 0, 0, DISPLAY_WIDTH - 60,
+  map.x = YEG_SIZE / 2 - (DISPLAY_WIDTH - 60) / 2;
+  map.y = YEG_SIZE / 2 - DISPLAY_HEIGHT / 2;
+  lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, DISPLAY_WIDTH - 60,
                  DISPLAY_HEIGHT);
 
-  redrawCursor(curs.x, curs.y, TFT_RED);
+  drawCursor(curs.x, curs.y, TFT_RED);
 
   while (true) {
     input = recordInput();
     switch (state) {
       case MODE0:
-        if (input.joyButton) {
-          state = MODE1;
-          break;
-        }
+        input = recordInput();
+
         cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
 
         if (curs.x != nCurs.x || curs.y != nCurs.y) {
-          redrawImage(yegX, yegY, curs.x - CURSOR_SIZE / 2,
-                      curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
-          curs = nCurs;
+          bool didMove = moveMap(
+              thresholdSign(nCurs.x, CURSOR_SIZE / 2, MAX_CURSOR_X),
+              thresholdSign(nCurs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y), map);
+          if (didMove) {
+            // The redraw helper function isn't set up for non-rectangular
+            // re-draws
+            lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0,
+                           DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
+            curs.x = (DISPLAY_WIDTH - 60) / 2;
+            curs.y = DISPLAY_HEIGHT / 2;
+          } else {
+            // TODO: we might want to just set this up as an lcd_image_draw
+            // function (Code size)
+            redrawImage(map.x, map.y, curs.x - CURSOR_SIZE / 2,
+                        curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
+            curs = nCurs;
+            curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
+            curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
+          }
         }
-        redrawCursor(curs.x, curs.y, TFT_RED);
+        drawCursor(curs.x, curs.y, TFT_RED);
 
         break;
       case MODE1:
