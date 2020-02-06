@@ -1,9 +1,11 @@
-#include <Arduino.h> // Included for type definitions
+#pragma once
+
+#include <Arduino.h>  // Included for type definitions
 
 typedef struct {
   int32_t lat;
   int32_t lon;
-  uint8_t rating; // from 0 to 10
+  uint8_t rating;  // from 0 to 10
   char name[55];
 } restaurant;
 
@@ -17,8 +19,8 @@ typedef struct {
 } controlInput;
 
 typedef struct {
-  uint16_t index ; // index of restaurant from 0 to NUM_RESTAURANTS -1
-  uint16_t dist ; // Manhatten distance to cursor position
+  uint16_t index;  // index of restaurant from 0 to NUM_RESTAURANTS -1
+  uint16_t dist;   // Manhattan distance to cursor position
 } restDist;
 
 typedef struct {
@@ -31,7 +33,4 @@ typedef struct {
   int y;
 } mapCords;
 
-enum mapState {
-  MODE0,
-  MODE1
-};
+enum mapState { MODE0, MODE1 };
