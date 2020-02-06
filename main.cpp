@@ -130,11 +130,6 @@ cursor processJoystick(int x, int y, cursor last) {
   return mapped;
 }
 
-int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
-  return 0;
-  // TODO: Implement.
-}
-
 int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
 // https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
 
@@ -178,8 +173,16 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
-void getRestaurantIndices(restaurant* restaurantArray, mapCord centre) {
+int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
+  return 0;
+  // TODO: Implement.
+}
+
+void generateRestaurantList(mapCord center, restDist* distanceArray) {
+  restaurant* currentRestaurant;
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
+    getRestaurant(i, currentRestaurant);
+    distanceArray[i] = {i, calculateManhattan(currentRestaurant, center)};
   }
 }
 
@@ -196,6 +199,7 @@ int main() {
   cursor curs;
   mapCord map;
   mapState state = MODE0;
+  restDist restaurantDistances[NUM_RESTAURANTS];
 
   // initial cursor position is the middle of the screen
   curs.x = (DISPLAY_WIDTH - 60) / 2;
@@ -214,8 +218,6 @@ int main() {
     input = recordInput();
     switch (state) {
       case MODE0: {
-        input = recordInput();
-
         cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
 
         if (curs.x != nCurs.x || curs.y != nCurs.y) {
@@ -242,7 +244,8 @@ int main() {
         drawCursor(curs.x, curs.y, TFT_RED);
       } break;
       case MODE1:
-        // drawRestaurantList(curs.x, curs.y);
+        generateRestaurantList();
+        drawRestaurantList();
         break;
     }
   }

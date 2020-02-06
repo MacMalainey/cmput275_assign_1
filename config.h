@@ -1,3 +1,5 @@
+#pragma once
+
 #define SD_CS     10
 #define JOY_VERT  A9  // should connect A9 to pin VRx
 #define JOY_HORIZ A8  // should connect A8 to pin VRy
