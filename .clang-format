@@ -3,4 +3,3 @@ BasedOnStyle:  Google
 AlignTrailingComments: true
 AlignConsecutiveAssignments: true
 AlignConsecutiveMacros: true
-SortIncludes: false

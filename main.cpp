@@ -11,11 +11,12 @@
 #include <SD.h>
 #include <SPI.h>
 #include <TouchScreen.h>
+#include <stdint.h>
 
 // Project includes
 #include "config.h"
-#include "types.h"
 #include "lcd_image.h"
+#include "types.h"
 
 // More defines (DO NOT SET THESE LIKE THOSE IN THE CONFIG HEADER)
 #define MAX_CURSOR_X DISPLAY_WIDTH - 60 - (CURSOR_SIZE / 2 + 1)
@@ -173,12 +174,12 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
-int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
+int calculateManhattan(restaurant* restaurantInfo, cursor center) {
   return 0;
   // TODO: Implement.
 }
 
-void generateRestaurantList(mapCord center, restDist* distanceArray) {
+void generateRestaurantList(cursor center, restDist* distanceArray) {
   restaurant* currentRestaurant;
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
     getRestaurant(i, currentRestaurant);
@@ -189,6 +190,9 @@ void generateRestaurantList(mapCord center, restDist* distanceArray) {
 void drawRestaurantList(restaurant* restaurantArray, uint8_t selectedIndex) {
   const uint8_t listSize = 21;
   const uint8_t fontSize = 2;
+
+  for (auto i = 0; i < listSize; i++) {
+  }
 }
 
 int main() {
@@ -244,7 +248,7 @@ int main() {
         drawCursor(curs.x, curs.y, TFT_RED);
       } break;
       case MODE1:
-        generateRestaurantList();
+        generateRestaurantList(curs, restaurantDistances);
         drawRestaurantList();
         break;
     }
