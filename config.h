@@ -39,3 +39,9 @@
 // thresholds to determine if there was a touch
 #define MINPRESSURE 10
 #define MAXPRESSURE 1000
+
+// lat/long conversion constants.
+#define LAT_NORTH 5361858l
+#define LAT_SOUTH 5340953l
+#define LON_WEST  -11368652l
+#define LON_EAST  -11333496l
