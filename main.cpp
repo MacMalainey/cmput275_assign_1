@@ -14,8 +14,8 @@
 
 // Project includes
 #include "config.h"
-#include "lcd_image.h"
 #include "types.h"
+#include "lcd_image.h"
 
 // More defines (DO NOT SET THESE LIKE THOSE IN THE CONFIG HEADER)
 #define MAX_CURSOR_X DISPLAY_WIDTH - 60 - (CURSOR_SIZE / 2 + 1)
@@ -67,8 +67,8 @@ controlInput recordInput() {
   controlInput input;
 
   // Read joystick input
-  input.joyX = analogRead(JOY_HORIZ);
-  input.joyY = analogRead(JOY_VERT);
+  input.joyX      = analogRead(JOY_HORIZ);
+  input.joyY      = analogRead(JOY_VERT);
   input.joyButton = digitalRead(JOY_SEL);
 
   TSPoint touch = ts.getPoint();
@@ -130,7 +130,7 @@ cursor processJoystick(int x, int y, cursor last) {
   return mapped;
 }
 
-int calculateManhattan(restaurant* restaurantInfo, mapCords center) {
+int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
   return 0;
   // TODO: Implement.
 }
@@ -178,7 +178,7 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
-void getRestaurantIndices(restaurant* restaurantArray, mapCords centre) {
+void getRestaurantIndices(restaurant* restaurantArray, mapCord centre) {
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
   }
 }
@@ -213,7 +213,7 @@ int main() {
   while (true) {
     input = recordInput();
     switch (state) {
-      case MODE0:
+      case MODE0: {
         input = recordInput();
 
         cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
@@ -234,14 +234,13 @@ int main() {
             // function (Code size)
             redrawImage(map.x, map.y, curs.x - CURSOR_SIZE / 2,
                         curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
-            curs = nCurs;
+            curs   = nCurs;
             curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
             curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
           }
         }
         drawCursor(curs.x, curs.y, TFT_RED);
-
-        break;
+      } break;
       case MODE1:
         // drawRestaurantList(curs.x, curs.y);
         break;
