@@ -1,3 +1,28 @@
 CMPUT 275 Assignment 1
-Mackenzie Malainey 157049, Michael TODO: rest of name and ID
+Mackenzie Malainey 157049, Michael Kwok TODO: STUDENT ID
 Winter 2020 Semester
+
+Description:
+This program displays a map of edmonton on the TFT display, allows
+the user to locate specific restaurants, and show where restaurants are located.
+The user controls the program through an attached joystick and the touch screen.
+
+Wiring Instructions:
+  LCD Display Shield -> insert into arduino, line up power ports (3V, 5V, and GND pins)
+  GND -> Joystick (GND)
+  5V -> Joystick (5V)
+  A8 -> Joystick (VRy)
+  A9 -> Joystick (VRx)
+  53 -> Joystick (SW)
+
+Compiling and Running Instructions:
+  1. Open folder containing source code and makefile in bash
+  2. Place lcd_image.cpp and lcd_image.h in folder
+  3. Connect Arduino via USB
+  4. Run make upload
+  5. Once map and cursor load use joystick and touch controls
+
+References:
+A lot of the code in this assignment was taken from previous weekly problems where applicable.
+The threshold sign function was base on the following stack exchange post:
+https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c

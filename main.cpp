@@ -37,6 +37,10 @@ Sd2Card card;
 // forward declaration for redrawing the cursor
 void redrawCursor(uint16_t colour);
 
+/**
+ * Description:
+ * 
+ */
 void setup() {
   init();
 
@@ -76,6 +80,13 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
 }
 
+/**
+ * Description:
+ * Reads from all device inputs
+ * 
+ * Returns:
+ * input (controlInput): all device inputs
+ */
 controlInput recordInput() {
   controlInput input;
 
@@ -103,6 +114,10 @@ controlInput recordInput() {
   return input;
 }
 
+/**
+ * Description:
+ * Draws the cursor on screen at the given cordinates and color
+ */
 void drawCursor(int x, int y, uint16_t colour) {
   tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE, colour);
 }
@@ -120,6 +135,19 @@ void redrawImage(int mapX, int mapY, int x, int y, int size) {
   lcd_image_draw(&yegImage, &tft, mapX + x, mapY + y, x, y, size, size);
 }
 
+/**
+ * Description:
+ * Creates a set of cordinates based off of another set of cordinates and the given input.
+ * Assumes the given input are raw joystick reads.
+ * 
+ * Arguments:
+ * x (int): Raw horizontal joystick input
+ * y (int): Raw vertical joystick input
+ * last (cord): Cordinate to base translation off of
+ * 
+ * Returns:
+ * newCord (cord): Translated cordinate measurments based off of "last"
+ */
 cord processJoystick(int x, int y, cord last) {
 
   cord mapped;
@@ -141,6 +169,19 @@ cord processJoystick(int x, int y, cord last) {
   return mapped;
 }
 
+/**
+ * Description:
+ * Moves a set of cords based on the direction of the signs of the input
+ * Assumes the cord represents the placement of the map (translates them one map segment length)
+ * 
+ * Arguments:
+ * deltaX (int): change in x value on map
+ * deltaY (int): change in y value on map
+ * &cords (cord): cords object to change
+ * 
+ * Returns:
+ * mapHasMoved (bool): variable telling if the map has changed location or not
+ */
 bool moveMap(int deltaX, int deltaY, cord &cords) {
   int nx = constrain(cords.x + (deltaX) * MAP_DISP_WIDTH,
                      0, YEG_SIZE - MAP_DISP_WIDTH);
@@ -182,6 +223,13 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
+/**
+ * Description:
+ * 
+ * Arguments:
+ * 
+ * Returns:
+ */
 void generateRestaurantList(cord center, restDist* distanceArray) {
   restaurant* currentRestaurant;
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
@@ -190,6 +238,13 @@ void generateRestaurantList(cord center, restDist* distanceArray) {
   }
 }
 
+/**
+ * Description:
+ * 
+ * Arguments:
+ * 
+ * Returns:
+ */
 void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
   const uint8_t listSize = 21;
   const uint8_t fontSize = 2;
@@ -198,6 +253,16 @@ void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
   }
 }
 
+/**
+ * Description:
+ * Draw any restaurants that are in the given bounds on the TFT display
+ * 
+ * Arguments:
+ * xLower (int): Horizontal map cord lower bound
+ * yLower (int): Vertical map cord lower bound
+ * xUpper (int): Horizontal map cord upper bound
+ * yUpper (int): Vertical map cord upper bound
+ */
 void drawRestaurantPoints(int xLower, int yLower, int xUpper, int yUpper) {
 
   for (int i = 0; i < NUM_RESTAURANTS; i++) {
@@ -242,28 +307,35 @@ int main() {
     switch (state) {
       case MODE0:
 
+      // Process touch input
       if (input.isTouch && (
         (input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
         (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
           drawRestaurantPoints(map.x, map.y, map.x + MAP_DISP_WIDTH, map.y + MAP_DISP_HEIGHT);
       }
 
+      // Process joystick input
       cord nCurs = processJoystick(input.joyX, input.joyY, curs);
 
       if (curs.x != nCurs.x || curs.y != nCurs.y) {
+        // Check for map movements
         bool didMove = moveMap(thresholdSign(nCurs.x, CURSOR_SIZE/2, MAX_CURSOR_X),
                                thresholdSign(nCurs.y, CURSOR_SIZE/2, MAX_CURSOR_Y),
                                map);
+        // Redraw entire map if it has moved
         if (didMove) {
           // The redraw helper function isn't set up for non-square re-draws
           lcd_image_draw(&yegImage, &tft, map.x, map.y,
                  0, 0, DISPLAY_WIDTH - 60, MAP_DISP_HEIGHT);
+          // Move cursor to center of screen
           curs.x = MAP_DISP_WIDTH/2;
           curs.y = MAP_DISP_HEIGHT/2;
         } else {
           // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
+          // Redraw previous cursor placement
           redrawImage(map.x, map.y, curs.x - CURSOR_SIZE/2, curs.y - CURSOR_SIZE/2, CURSOR_SIZE);
           curs = nCurs;
+          // Make certain the cursor doesn't move off screen
           curs.y = constrain(curs.y, CURSOR_SIZE/2, MAX_CURSOR_Y);
           curs.x = constrain(curs.x, CURSOR_SIZE/2, MAX_CURSOR_X);
         }
@@ -271,6 +343,7 @@ int main() {
       }
       break;
       case MODE1:
+        // TODO: This gets rerun every time, maybe make a transition function so this gets ran first time?
         generateRestaurantList(curs, restaurantDistances);
         drawRestaurantList(restaurantDistances, listSelected);
         break;
