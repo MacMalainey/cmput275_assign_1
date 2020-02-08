@@ -1,3 +1,5 @@
+#pragma once
+
 #define SD_CS     10
 #define JOY_VERT  A9  // should connect A9 to pin VRx
 #define JOY_HORIZ A8  // should connect A8 to pin VRy
@@ -31,13 +33,11 @@
 #define TS_MAXY 920
 
 // thresholds to determine if there was a touch
-#define MINPRESSURE   10
+#define MINPRESSURE 10
 #define MAXPRESSURE 1000
 
-// conversion numbers for converting between lattitude and longitude
-#define MAP_WIDTH 2048
-#define MAP_HEIGHT 2048
+// lat/long conversion constants.
 #define LAT_NORTH 5361858l
 #define LAT_SOUTH 5340953l
-#define LON_WEST -11368652l
-#define LON_EAST -11333496l
+#define LON_WEST  -11368652l
+#define LON_EAST  -11333496l

@@ -13,9 +13,8 @@
 #include <TouchScreen.h>
 
 // Project includes
-#include "config.h"
-#include "types.h"
 #include "lcd_image.h"
+#include "utils.h"
 
 // More defines (DO NOT SET THESE LIKE THOSE IN THE CONFIG HEADER)
 
@@ -105,8 +104,7 @@ controlInput recordInput() {
 }
 
 void drawCursor(int x, int y, uint16_t colour) {
-  tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE,
-               CURSOR_SIZE, colour);
+  tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE, colour);
 }
 
 /**
@@ -130,28 +128,18 @@ cord processJoystick(int x, int y, cord last) {
 
   // Check if joystick is getting pushed
   if (abs(y - JOY_CENTER) > JOY_DEADZONE) {
-    mapped.y +=
-        map(y, 0, 1024, -MAX_CURSOR_SPEED,
-            MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
+    mapped.y += map(y, 0, 1024, -MAX_CURSOR_SPEED,
+                    MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
   }
 
   // remember the x-reading increases as we push left
   if (abs(x - JOY_CENTER) > JOY_DEADZONE) {
-    mapped.x +=
-        map(x, 0, 1024, MAX_CURSOR_SPEED,
-            -MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
+    mapped.x += map(x, 0, 1024, MAX_CURSOR_SPEED,
+                    -MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
   }
 
   return mapped;
 }
-
-int calculateManhattan(restaurant* restaurantInfo, cord center) {
-  return 0;
-  // TODO: Implement.
-}
-
-int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
-// https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
 
 bool moveMap(int deltaX, int deltaY, cord &cords) {
   int nx = constrain(cords.x + (deltaX) * MAP_DISP_WIDTH,
@@ -194,22 +182,20 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
   *restPtr = restBlock[restIndex % 8];
 }
 
-void getRestaurantIndices(restaurant* restaurantArray, cord centre) {
+void generateRestaurantList(cord center, restDist* distanceArray) {
+  restaurant* currentRestaurant;
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
+    getRestaurant(i, currentRestaurant);
+    distanceArray[i] = {i, calculateManhattan(currentRestaurant, center)};
   }
 }
 
-void drawRestaurantList(restaurant* restaurantArray, uint8_t selectedIndex) {
+void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
   const uint8_t listSize = 21;
   const uint8_t fontSize = 2;
-}
 
-int16_t lon_to_x (int32_t lon) {
-  return map(lon, LON_WEST, LON_EAST, 0, MAP_WIDTH);
-}
-
-int16_t lat_to_y (int32_t lat) {
-  return map(lat, LAT_NORTH, LAT_SOUTH, 0, MAP_HEIGHT);
+  for (auto i = 0; i < listSize; i++) {
+  }
 }
 
 void drawRestaurantPoints(int xLower, int yLower, int xUpper, int yUpper) {
@@ -236,6 +222,8 @@ int main() {
   cord curs;
   cord map;
   mapState state = MODE0;
+  restDist restaurantDistances[NUM_RESTAURANTS];
+  uint8_t listSelected = 0;
 
   // initial cursor position is the middle of the screen
   curs.x = MAP_DISP_WIDTH/2;
@@ -267,7 +255,7 @@ int main() {
                                thresholdSign(nCurs.y, CURSOR_SIZE/2, MAX_CURSOR_Y),
                                map);
         if (didMove) {
-          // The redraw helper function isn't set up for non-rectangular re-draws
+          // The redraw helper function isn't set up for non-square re-draws
           lcd_image_draw(&yegImage, &tft, map.x, map.y,
                  0, 0, DISPLAY_WIDTH - 60, MAP_DISP_HEIGHT);
           curs.x = MAP_DISP_WIDTH/2;
@@ -283,7 +271,8 @@ int main() {
       }
       break;
       case MODE1:
-        // drawRestaurantList(curs.x, curs.y);
+        generateRestaurantList(curs, restaurantDistances);
+        drawRestaurantList(restaurantDistances, listSelected);
         break;
     }
   }

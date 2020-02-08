@@ -21,7 +21,7 @@ typedef struct {
 typedef struct {
   uint16_t index ; // index of restaurant from 0 to NUM_RESTAURANTS -1
   uint16_t dist ; // Manhatten distance to cursor position
-} restSmall;
+} restDist;
 
 typedef struct {
   int x;
