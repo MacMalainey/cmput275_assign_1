@@ -18,8 +18,14 @@
 #include "lcd_image.h"
 
 // More defines (DO NOT SET THESE LIKE THOSE IN THE CONFIG HEADER)
-#define MAX_CURSOR_X DISPLAY_WIDTH - 60 - (CURSOR_SIZE / 2 + 1)
-#define MAX_CURSOR_Y DISPLAY_HEIGHT - (CURSOR_SIZE / 2 + 1)
+
+// Maximum cursor positions on screen
+#define MAX_CURSOR_X (DISPLAY_WIDTH - 60) - (CURSOR_SIZE/2 + 1)
+#define MAX_CURSOR_Y DISPLAY_HEIGHT - (CURSOR_SIZE/2 + 1)
+
+// Dimensions of the part allocated to the map display
+#define MAP_DISP_WIDTH (DISPLAY_WIDTH - 60)
+#define MAP_DISP_HEIGHT DISPLAY_HEIGHT
 
 MCUFRIEND_kbv tft;
 
@@ -48,6 +54,16 @@ void setup() {
   // must come before SD.begin() ...
   tft.begin(ID);  // LCD gets ready to work
 
+  // SD card initialization for raw reads
+  Serial.print("Initializing SPI communication for raw reads...");
+  if (!card.init(SPI_HALF_SPEED, SD_CS)) {
+    Serial.println("failed! Is the card inserted properly?");
+    while (true) {}
+  }
+  else {
+    Serial.println("OK!");
+  }
+
   Serial.print("Initializing SD card...");
   if (!SD.begin(SD_CS)) {
     Serial.println("failed! Is it inserted properly?");
@@ -59,8 +75,6 @@ void setup() {
   tft.setRotation(1);
 
   tft.fillScreen(TFT_BLACK);
-
-  // TODO: Move to another screen
 }
 
 controlInput recordInput() {
@@ -101,15 +115,16 @@ void drawCursor(int x, int y, uint16_t colour) {
  *
  * Paramters:
  * x (int): horizontal cordinate to start drawing at
- * y (int): vertical cordinate to start drawing at
+ * y (int): vertcursoral cordinate to start drawing at
  * size (int): length and width of image segment to draw
  */
 void redrawImage(int mapX, int mapY, int x, int y, int size) {
   lcd_image_draw(&yegImage, &tft, mapX + x, mapY + y, x, y, size, size);
 }
 
-cursor processJoystick(int x, int y, cursor last) {
-  cursor mapped;
+cord processJoystick(int x, int y, cord last) {
+
+  cord mapped;
   mapped.x = last.x;
   mapped.y = last.y;
 
@@ -130,7 +145,7 @@ cursor processJoystick(int x, int y, cursor last) {
   return mapped;
 }
 
-int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
+int calculateManhattan(restaurant* restaurantInfo, cord center) {
   return 0;
   // TODO: Implement.
 }
@@ -138,11 +153,11 @@ int calculateManhattan(restaurant* restaurantInfo, mapCord center) {
 int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
 // https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
 
-bool moveMap(int deltaX, int deltaY, mapCord& cords) {
-  int nx = constrain(cords.x + (deltaX) * (DISPLAY_WIDTH - 60), 0,
-                     YEG_SIZE - (DISPLAY_WIDTH - 60));
-  int ny = constrain(cords.y + (deltaY) * (DISPLAY_HEIGHT), 0,
-                     YEG_SIZE - DISPLAY_HEIGHT);
+bool moveMap(int deltaX, int deltaY, cord &cords) {
+  int nx = constrain(cords.x + (deltaX) * MAP_DISP_WIDTH,
+                     0, YEG_SIZE - MAP_DISP_WIDTH);
+  int ny = constrain(cords.y + (deltaY) * MAP_DISP_HEIGHT,
+                     0, YEG_SIZE - MAP_DISP_HEIGHT);
 
   if (nx != cords.x || ny != cords.y) {
     cords.x = nx;
@@ -170,15 +185,16 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
 
   if (prevBlockNum != blockNum) {
     prevBlockNum = blockNum;
-    while (!card.readBlock(blockNum, (uint8_t*)restBlock)) {
-      Serial.println("Read block failed, trying again.");
+    while (!card.readBlock(blockNum, (uint8_t*) restBlock)) {
+      Serial.print("Read block failed, trying again. blockNum = ");
+      Serial.println(blockNum);
     }
   }
 
   *restPtr = restBlock[restIndex % 8];
 }
 
-void getRestaurantIndices(restaurant* restaurantArray, mapCord centre) {
+void getRestaurantIndices(restaurant* restaurantArray, cord centre) {
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
   }
 }
@@ -188,59 +204,84 @@ void drawRestaurantList(restaurant* restaurantArray, uint8_t selectedIndex) {
   const uint8_t fontSize = 2;
 }
 
+int16_t lon_to_x (int32_t lon) {
+  return map(lon, LON_WEST, LON_EAST, 0, MAP_WIDTH);
+}
+
+int16_t lat_to_y (int32_t lat) {
+  return map(lat, LAT_NORTH, LAT_SOUTH, 0, MAP_HEIGHT);
+}
+
+void drawRestaurantPoints(int xLower, int yLower, int xUpper, int yUpper) {
+
+  for (int i = 0; i < NUM_RESTAURANTS; i++) {
+    restaurant rest;
+    getRestaurant(i, &rest);
+
+    int x = lon_to_x(rest.lon);
+    int y = lat_to_y(rest.lat);
+
+    if ((x >= xLower && x <= xUpper) &&
+         y >= yLower && y <= yUpper) {
+      tft.fillCircle(x - xLower, y - yLower, 4, TFT_PURPLE);
+    }
+  }
+}
+
 int main() {
   setup();
 
   // Init variables
   controlInput input;
-  cursor curs;
-  mapCord map;
+  cord curs;
+  cord map;
   mapState state = MODE0;
 
   // initial cursor position is the middle of the screen
-  curs.x = (DISPLAY_WIDTH - 60) / 2;
-  curs.y = DISPLAY_HEIGHT / 2;
+  curs.x = MAP_DISP_WIDTH/2;
+  curs.y = MAP_DISP_HEIGHT/2;
 
-  // Draws the centre of the Edmonton map, leaving the rightmost 60 columns
-  // black
-  map.x = YEG_SIZE / 2 - (DISPLAY_WIDTH - 60) / 2;
-  map.y = YEG_SIZE / 2 - DISPLAY_HEIGHT / 2;
-  lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, DISPLAY_WIDTH - 60,
-                 DISPLAY_HEIGHT);
+  // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
+  map.x = YEG_SIZE/2 - MAP_DISP_WIDTH/2;
+	map.y = YEG_SIZE/2 - MAP_DISP_HEIGHT/2;
+	lcd_image_draw(&yegImage, &tft, map.x, map.y,
+                 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
 
   drawCursor(curs.x, curs.y, TFT_RED);
 
   while (true) {
     input = recordInput();
     switch (state) {
-      case MODE0: {
-        input = recordInput();
+      case MODE0:
 
-        cursor nCurs = processJoystick(input.joyX, input.joyY, curs);
+      if (input.isTouch && (
+        (input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
+        (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
+          drawRestaurantPoints(map.x, map.y, map.x + MAP_DISP_WIDTH, map.y + MAP_DISP_HEIGHT);
+      }
 
-        if (curs.x != nCurs.x || curs.y != nCurs.y) {
-          bool didMove = moveMap(
-              thresholdSign(nCurs.x, CURSOR_SIZE / 2, MAX_CURSOR_X),
-              thresholdSign(nCurs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y), map);
-          if (didMove) {
-            // The redraw helper function isn't set up for non-rectangular
-            // re-draws
-            lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0,
-                           DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
-            curs.x = (DISPLAY_WIDTH - 60) / 2;
-            curs.y = DISPLAY_HEIGHT / 2;
-          } else {
-            // TODO: we might want to just set this up as an lcd_image_draw
-            // function (Code size)
-            redrawImage(map.x, map.y, curs.x - CURSOR_SIZE / 2,
-                        curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
-            curs   = nCurs;
-            curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
-            curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
-          }
+      cord nCurs = processJoystick(input.joyX, input.joyY, curs);
+
+      if (curs.x != nCurs.x || curs.y != nCurs.y) {
+        bool didMove = moveMap(thresholdSign(nCurs.x, CURSOR_SIZE/2, MAX_CURSOR_X),
+                               thresholdSign(nCurs.y, CURSOR_SIZE/2, MAX_CURSOR_Y),
+                               map);
+        if (didMove) {
+          // The redraw helper function isn't set up for non-rectangular re-draws
+          lcd_image_draw(&yegImage, &tft, map.x, map.y,
+                 0, 0, DISPLAY_WIDTH - 60, MAP_DISP_HEIGHT);
+          curs.x = MAP_DISP_WIDTH/2;
+          curs.y = MAP_DISP_HEIGHT/2;
+        } else {
+          // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
+          redrawImage(map.x, map.y, curs.x - CURSOR_SIZE/2, curs.y - CURSOR_SIZE/2, CURSOR_SIZE);
+          curs = nCurs;
+          curs.y = constrain(curs.y, CURSOR_SIZE/2, MAX_CURSOR_Y);
+          curs.x = constrain(curs.x, CURSOR_SIZE/2, MAX_CURSOR_X);
         }
         drawCursor(curs.x, curs.y, TFT_RED);
-      } break;
+      }
+      break;
       case MODE1:
         // drawRestaurantList(curs.x, curs.y);
         break;

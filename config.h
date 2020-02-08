@@ -20,10 +20,6 @@
 #define YM 9   // can be a digital pin
 #define XP 8   // can be a digital pin
 
-// dimensions of the part allocated to the map display
-#define MAP_DISP_WIDTH  (DISPLAY_WIDTH - 60)
-#define MAP_DISP_HEIGHT DISPLAY_HEIGHT
-
 #define REST_START_BLOCK 4000000
 #define NUM_RESTAURANTS  1066
 
@@ -35,5 +31,13 @@
 #define TS_MAXY 920
 
 // thresholds to determine if there was a touch
-#define MINPRESSURE 10
+#define MINPRESSURE   10
 #define MAXPRESSURE 1000
+
+// conversion numbers for converting between lattitude and longitude
+#define MAP_WIDTH 2048
+#define MAP_HEIGHT 2048
+#define LAT_NORTH 5361858l
+#define LAT_SOUTH 5340953l
+#define LON_WEST -11368652l
+#define LON_EAST -11333496l
