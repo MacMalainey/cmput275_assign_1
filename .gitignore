@@ -2,3 +2,4 @@
 templates/
 build-mega2560/
 build-mega-atmega2560/
+.vscode/

@@ -22,10 +22,6 @@
 #define YM 9   // can be a digital pin
 #define XP 8   // can be a digital pin
 
-// dimensions of the part allocated to the map display
-#define MAP_DISP_WIDTH  (DISPLAY_WIDTH - 60)
-#define MAP_DISP_HEIGHT DISPLAY_HEIGHT
-
 #define REST_START_BLOCK 4000000
 #define NUM_RESTAURANTS  1066
 
