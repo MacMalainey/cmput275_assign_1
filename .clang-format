@@ -1,6 +1,5 @@
 Language:        Cpp
 BasedOnStyle:  Google
 AlignTrailingComments: true
-AlignConsecutiveAssignments: true
 AlignConsecutiveMacros: true
 ColumnLimit: 120

@@ -28,9 +28,6 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 Sd2Card card;
 
-// forward declaration for redrawing the cursor
-void redrawCursor(uint16_t colour);
-
 void setup() {
   init();
 
@@ -66,8 +63,8 @@ controlInput recordInput() {
   controlInput input;
 
   // Read joystick input
-  input.joyX      = analogRead(JOY_HORIZ);
-  input.joyY      = analogRead(JOY_VERT);
+  input.joyX = analogRead(JOY_HORIZ);
+  input.joyY = analogRead(JOY_VERT);
   input.joyButton = digitalRead(JOY_SEL);
 
   TSPoint touch = ts.getPoint();
@@ -165,11 +162,12 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
 }
 
 void generateRestaurantList(cursor center, restDist* distanceArray) {
-  restaurant* currentRestaurant;
-  for (auto i = 0; i < NUM_RESTAURANTS; i++) {
+  restaurant* currentRestaurant = nullptr;
+  for (uint16_t i = 0; i < NUM_RESTAURANTS; i++) {
     getRestaurant(i, currentRestaurant);
     distanceArray[i] = {i, calculateManhattan(currentRestaurant, center)};
   }
+  isort(distanceArray, NUM_RESTAURANTS);
 }
 
 void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
@@ -177,6 +175,7 @@ void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
   const uint8_t fontSize = 2;
 
   for (auto i = 0; i < listSize; i++) {
+    Serial.println(restaurantArray[i].dist);
   }
 }
 
@@ -195,8 +194,8 @@ int main() {
   curs.x = (DISPLAY_WIDTH - 60) / 2;
   curs.y = DISPLAY_HEIGHT / 2;
 
-  // Draws the centre of the Edmonton map, leaving the rightmost 60 columns
-  // black
+  // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
+
   map.x = YEG_SIZE / 2 - (DISPLAY_WIDTH - 60) / 2;
   map.y = YEG_SIZE / 2 - DISPLAY_HEIGHT / 2;
   lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, DISPLAY_WIDTH - 60, DISPLAY_HEIGHT);
@@ -222,7 +221,7 @@ int main() {
             // TODO: we might want to just set this up as an lcd_image_draw
             // function (Code size)
             redrawImage(map.x, map.y, curs.x - CURSOR_SIZE / 2, curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
-            curs   = nCurs;
+            curs = nCurs;
             curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
             curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
           }

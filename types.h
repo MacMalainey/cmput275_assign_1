@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Arduino.h>  // Included for type definitions
+#include <stdint.h>  // Included for type definitions
 
 typedef struct {
   int32_t lat;
