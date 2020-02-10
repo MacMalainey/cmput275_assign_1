@@ -84,7 +84,7 @@ controlInput recordInput() {
   controlInput input;
 
   // Read joystick input
-  input.joyX = analogRead(JOY_HORIZ) - JOY_CENTER;
+  input.joyX = -1*(analogRead(JOY_HORIZ) - JOY_CENTER); // Input is reversed
   input.joyY = analogRead(JOY_VERT) - JOY_CENTER;
   input.joyButton = digitalRead(JOY_SEL);
   input.joyXMoved = true;
@@ -126,19 +126,6 @@ controlInput recordInput() {
  */
 void drawCursor(int x, int y, uint16_t colour) {
   tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE, colour);
-}
-
-/**
- * Summary:
- * Redraws a portion of the background image (in a square)
- *
- * Paramters:
- * x (int): horizontal cordinate to start drawing at
- * y (int): vertcursoral cordinate to start drawing at
- * size (int): length and width of image segment to draw
- */
-void redrawImage(int mapX, int mapY, int x, int y, int size) {
-  lcd_image_draw(&yegImage, &tft, mapX + x, mapY + y, x, y, size, size);
 }
 
 inline float calculate_acceleration(int joystick_value) {
@@ -356,14 +343,19 @@ int main() {
           // Redraw entire map if it has moved
           if (didMove) {
             // The redraw helper function isn't set up for non-square re-draws
-            lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, DISPLAY_WIDTH - 60, MAP_DISP_HEIGHT);
+            lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
             // Move cursor to center of screen
             curs.x = MAP_DISP_WIDTH / 2;
             curs.y = MAP_DISP_HEIGHT / 2;
           } else {
             // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
             // Redraw previous cursor placement
-            redrawImage(map.x, map.y, curs.x - CURSOR_SIZE / 2, curs.y - CURSOR_SIZE / 2, CURSOR_SIZE);
+            lcd_image_draw(&yegImage, &tft, 
+                            map.x + curs.x - CURSOR_SIZE / 2,
+                            map.y + curs.y - CURSOR_SIZE / 2,
+                            curs.x - CURSOR_SIZE / 2,
+                            curs.y - CURSOR_SIZE / 2,
+                            CURSOR_SIZE, CURSOR_SIZE);
             curs = nCurs;
             // Make certain the cursor doesn't move off screen
             curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
