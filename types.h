@@ -12,6 +12,8 @@ typedef struct {
 typedef struct {
   int16_t joyX;
   int16_t joyY;
+  bool joyXMoved;
+  bool joyYMoved;
   bool joyButton;
   int16_t touchX;
   int16_t touchY;
@@ -19,8 +21,8 @@ typedef struct {
 } controlInput;
 
 typedef struct {
-  uint16_t index ; // index of restaurant from 0 to NUM_RESTAURANTS -1
-  uint16_t dist ; // Manhatten distance to cursor position
+  uint16_t index;  // index of restaurant from 0 to NUM_RESTAURANTS -1
+  uint16_t dist;   // Manhatten distance to cursor position
 } restDist;
 
 typedef struct {
@@ -28,4 +30,4 @@ typedef struct {
   int y;
 } cord;
 
-enum mapState { MODE0, MODE1 };
+enum mapState { MODE0, MODE1, Transition1, Transition0 };

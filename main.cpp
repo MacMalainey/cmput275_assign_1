@@ -84,9 +84,11 @@ controlInput recordInput() {
   controlInput input;
 
   // Read joystick input
-  input.joyX = analogRead(JOY_HORIZ);
-  input.joyY = analogRead(JOY_VERT);
+  input.joyX = analogRead(JOY_HORIZ) - JOY_CENTER;
+  input.joyY = analogRead(JOY_VERT) - JOY_CENTER;
   input.joyButton = digitalRead(JOY_SEL);
+  input.joyXMoved = true;
+  input.joyYMoved = true;
 
   TSPoint touch = ts.getPoint();
 
@@ -104,6 +106,17 @@ controlInput recordInput() {
   } else
     input.isTouch = false;
 
+  if (input.joyY > -JOY_DEADZONE && input.joyY < JOY_DEADZONE) {
+    input.joyY = 0;
+    input.joyYMoved = false;
+  }
+
+  if (input.joyX > -JOY_DEADZONE && input.joyX < JOY_DEADZONE) {
+    input.joyX = 0;
+    input.joyXMoved = false;
+  }
+
+  // Process joystick input. x and y will be 0 when inside deadzone, value outside.
   return input;
 }
 
@@ -128,6 +141,21 @@ void redrawImage(int mapX, int mapY, int x, int y, int size) {
   lcd_image_draw(&yegImage, &tft, mapX + x, mapY + y, x, y, size, size);
 }
 
+inline float calculate_acceleration(int joystick_value) {
+  // constant for the curve for the joystick's acceleration function.
+  const float curve_constant = 1.2;
+
+  float normalized = 0.0;
+
+  if (joystick_value < 0) {
+    normalized = (float)(joystick_value + JOY_DEADZONE) / JOY_CENTER;
+  } else {
+    normalized = (float)(joystick_value - JOY_DEADZONE) / JOY_CENTER;
+  }
+
+  return 8 * sin(curve_constant * normalized);
+}
+
 /**
  * Description:
  * Creates a set of cordinates based off of another set of cordinates and the given input.
@@ -141,21 +169,17 @@ void redrawImage(int mapX, int mapY, int x, int y, int size) {
  * Returns:
  * newCord (cord): Translated cordinate measurments based off of "last"
  */
-cord processJoystick(int x, int y, cord last) {
+cord processJoystick(const controlInput& joystick, const cord& last) {
   cord mapped;
-  mapped.x = last.x;
+
   mapped.y = last.y;
+  mapped.x = last.x;
 
-  // Check if joystick is getting pushed
-  if (abs(y - JOY_CENTER) > JOY_DEADZONE) {
-    mapped.y += map(y, 0, 1024, -MAX_CURSOR_SPEED,
-                    MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
+  if (joystick.joyYMoved) {
+    mapped.y += calculate_acceleration(joystick.joyY);
   }
-
-  // remember the x-reading increases as we push left
-  if (abs(x - JOY_CENTER) > JOY_DEADZONE) {
-    mapped.x += map(x, 0, 1024, MAX_CURSOR_SPEED,
-                    -MAX_CURSOR_SPEED);  // decrease the y coordinate of the cursor
+  if (joystick.joyXMoved) {
+    mapped.x += calculate_acceleration(joystick.joyX);
   }
 
   return mapped;
@@ -197,17 +221,14 @@ bool moveMap(int deltaX, int deltaY, cord& cords) {
  */
 void getRestaurant(int restIndex, restaurant* restPtr) {
   uint32_t blockNum = REST_START_BLOCK + restIndex / 8;
-
-  // Cache values
   static restaurant restBlock[8];
-  static uint32_t prevBlockNum = 0;
+  static uint32_t previousBlockNum = 0;
 
-  if (prevBlockNum != blockNum) {
-    prevBlockNum = blockNum;
+  if (blockNum != previousBlockNum) {
     while (!card.readBlock(blockNum, (uint8_t*)restBlock)) {
-      Serial.print("Read block failed, trying again. blockNum = ");
-      Serial.println(blockNum);
+      Serial.println("Read block failed, trying again.");
     }
+    previousBlockNum = blockNum;
   }
 
   *restPtr = restBlock[restIndex % 8];
@@ -221,11 +242,13 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
  * Returns:
  */
 void generateRestaurantList(cord center, restDist* distanceArray) {
-  restaurant* currentRestaurant;
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
-    getRestaurant(i, currentRestaurant);
-    distanceArray[i] = {i, calculateManhattan(currentRestaurant, center)};
+    restaurant currentRestaurant;
+    getRestaurant(i, &currentRestaurant);
+    auto distance = calculateManhattan(&currentRestaurant, center);
+    distanceArray[i] = {i, distance};
   }
+
   isort(distanceArray, NUM_RESTAURANTS);
 }
 
@@ -236,12 +259,23 @@ void generateRestaurantList(cord center, restDist* distanceArray) {
  *
  * Returns:
  */
-void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex) {
-  const uint8_t listSize = 21;
+void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex) {
   const uint8_t fontSize = 2;
 
-  for (auto i = 0; i < listSize; i++) {
-    Serial.println(restaurantArray[i].dist);
+  tft.setTextSize(fontSize);
+  tft.setCursor(0, 0);
+  tft.setTextWrap(false);
+
+  for (auto i = 0; i < MENU_LIST_SIZE; i++) {
+    restaurant currentRestaurant;
+    getRestaurant(restaurantArray[i].index, &currentRestaurant);
+
+    if (i == selectedIndex) {
+      tft.setTextColor(TFT_BLACK, TFT_WHITE);
+    } else {
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
+    tft.println(currentRestaurant.name);
   }
 }
 
@@ -276,9 +310,9 @@ int main() {
   controlInput input;
   cord curs;
   cord map;
-  mapState state = MODE0;
+  mapState state = Transition0;
   restDist restaurantDistances[NUM_RESTAURANTS];
-  uint8_t listSelected = 0;
+  int8_t listSelected = 0;
 
   // initial cursor position is the middle of the screen
   curs.x = MAP_DISP_WIDTH / 2;
@@ -287,23 +321,23 @@ int main() {
   // Draws the centre of the Edmonton map, leaving the rightmost 60 columns black
   map.x = YEG_SIZE / 2 - MAP_DISP_WIDTH / 2;
   map.y = YEG_SIZE / 2 - MAP_DISP_HEIGHT / 2;
-  lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
 
-  drawCursor(curs.x, curs.y, TFT_RED);
+  // Pregenerate and sort list.
+  generateRestaurantList(curs, restaurantDistances);
+
+  // Process joystick input
+  input = recordInput();
+  cord nCurs = processJoystick(input, curs);
 
   while (true) {
-    input = recordInput();
     switch (state) {
       case MODE0:
-
+        input = recordInput();
         // Process touch input
         if (input.isTouch && ((input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
                               (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
           drawRestaurantPoints(map.x, map.y, map.x + MAP_DISP_WIDTH, map.y + MAP_DISP_HEIGHT);
         }
-
-        // Process joystick input
-        cord nCurs = processJoystick(input.joyX, input.joyY, curs);
 
         if (curs.x != nCurs.x || curs.y != nCurs.y) {
           // Check for map movements
@@ -327,11 +361,45 @@ int main() {
           }
           drawCursor(curs.x, curs.y, TFT_RED);
         }
+        if (input.joyButton == false) {
+          state = Transition1;
+        }
         break;
       case MODE1:
-        // TODO: This gets rerun every time, maybe make a transition function so this gets ran first time?
-        generateRestaurantList(curs, restaurantDistances);
-        drawRestaurantList(restaurantDistances, listSelected);
+        input = recordInput();
+        if (input.joyYMoved) {
+          // Update only when joyY used
+          if (input.joyY < 0) {
+            // Go up list
+            listSelected--;
+          } else if (input.joyY > 0) {
+            // Go down list
+            listSelected++;
+          }
+          listSelected = constrain(listSelected, 0, MENU_LIST_SIZE);
+          drawRestaurantList(restaurantDistances, listSelected);
+        }
+        if (input.joyButton == false) {
+          restaurant targetRestaurant;
+          getRestaurant(restaurantDistances[listSelected].index, &targetRestaurant);
+          nCurs.y = lat_to_y(targetRestaurant.lat);
+          nCurs.x = lon_to_x(targetRestaurant.lon);
+          state = Transition0;
+        }
+        break;
+      case Transition1:
+        // Switching to Mode1
+        // Clear screen
+        tft.fillScreen(TFT_BLACK);
+        drawRestaurantList(restaurantDistances, 0);
+        Serial.println("Switching to mode1");
+        state = MODE1;
+        break;
+      case Transition0:
+        lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
+        drawCursor(curs.x, curs.y, TFT_RED);
+        Serial.println("Switching to mode0");
+        state = MODE0;
         break;
     }
   }

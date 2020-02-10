@@ -41,3 +41,5 @@
 #define LAT_SOUTH 5340953l
 #define LON_WEST  -11368652l
 #define LON_EAST  -11333496l
+
+#define MENU_LIST_SIZE 21

@@ -18,7 +18,7 @@ int16_t lat_to_y(int32_t lat) { return map(lat, LAT_NORTH, LAT_SOUTH, 0, YEG_SIZ
  *
  * Returns:
  */
-uint16_t calculateManhattan(restaurant* restaurantInfo, cursor center) {
+uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
   return abs(center.x - lon_to_x(restaurantInfo->lon)) + abs(center.y - lat_to_y(restaurantInfo->lat));
 }
 
@@ -49,7 +49,4 @@ void isort(restDist* array, uint16_t length) {
     }
     i++;
   }
-}
-int16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
-  return abs(center.x - lon_to_x(restaurantInfo->lon)) + abs(center.y - lat_to_y(restaurantInfo->lat));
 }
