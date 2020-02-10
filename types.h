@@ -30,4 +30,4 @@ typedef struct {
   int y;
 } cord;
 
-enum mapState { MODE0, MODE1, Transition1, Transition0 };
+enum mapState { MODE0, MODE1, Transition1 };

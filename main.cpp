@@ -259,7 +259,7 @@ void generateRestaurantList(cord center, restDist* distanceArray) {
  *
  * Returns:
  */
-void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex) {
+void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool isUpdate) {
   const uint8_t fontSize = 2;
 
   tft.setTextSize(fontSize);
@@ -270,12 +270,24 @@ void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex) {
     restaurant currentRestaurant;
     getRestaurant(restaurantArray[i].index, &currentRestaurant);
 
-    if (i == selectedIndex) {
-      tft.setTextColor(TFT_BLACK, TFT_WHITE);
+    if (isUpdate) {
+      if (i == selectedIndex) {
+        tft.setTextColor(TFT_BLACK, TFT_WHITE);
+        tft.println(currentRestaurant.name);
+      } else if (i == selectedIndex - 1 || i == selectedIndex + 1) {
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.println(currentRestaurant.name);
+      } else {
+        tft.println();
+      }
     } else {
-      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      if (i == selectedIndex) {
+        tft.setTextColor(TFT_BLACK, TFT_WHITE);
+      } else {
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      }
+      tft.println(currentRestaurant.name);
     }
-    tft.println(currentRestaurant.name);
   }
 }
 
@@ -310,7 +322,7 @@ int main() {
   controlInput input;
   cord curs;
   cord map;
-  mapState state = Transition0;
+  mapState state = MODE0;
   restDist restaurantDistances[NUM_RESTAURANTS];
   int8_t listSelected = 0;
 
@@ -322,17 +334,18 @@ int main() {
   map.x = YEG_SIZE / 2 - MAP_DISP_WIDTH / 2;
   map.y = YEG_SIZE / 2 - MAP_DISP_HEIGHT / 2;
 
-  // Pregenerate and sort list.
-  generateRestaurantList(curs, restaurantDistances);
+  lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
+  drawCursor(curs.x, curs.y, TFT_RED);
 
-  // Process joystick input
-  input = recordInput();
-  cord nCurs = processJoystick(input, curs);
+  cord nCurs = curs;
 
   while (true) {
+    // Process joystick input
+
     switch (state) {
       case MODE0:
         input = recordInput();
+        nCurs = processJoystick(input, curs);
         // Process touch input
         if (input.isTouch && ((input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
                               (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
@@ -377,29 +390,34 @@ int main() {
             listSelected++;
           }
           listSelected = constrain(listSelected, 0, MENU_LIST_SIZE);
-          drawRestaurantList(restaurantDistances, listSelected);
+          drawRestaurantList(restaurantDistances, listSelected, true);
         }
         if (input.joyButton == false) {
           restaurant targetRestaurant;
           getRestaurant(restaurantDistances[listSelected].index, &targetRestaurant);
-          nCurs.y = lat_to_y(targetRestaurant.lat);
-          nCurs.x = lon_to_x(targetRestaurant.lon);
-          state = Transition0;
+          map.y = lat_to_y(targetRestaurant.lat) - (MAP_DISP_HEIGHT / 2);
+          map.x = lon_to_x(targetRestaurant.lon) - (MAP_DISP_WIDTH / 2);
+
+          curs.x = MAP_DISP_WIDTH / 2;
+          curs.y = MAP_DISP_HEIGHT / 2;
+
+          lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
+          drawCursor(curs.x, curs.y, TFT_RED);
+          state = MODE0;
         }
         break;
       case Transition1:
         // Switching to Mode1
         // Clear screen
         tft.fillScreen(TFT_BLACK);
-        drawRestaurantList(restaurantDistances, 0);
+        {
+          // Real location = map + local coord
+          cord realLocation = {curs.x + map.x, curs.y + map.y};
+          generateRestaurantList(realLocation, restaurantDistances);
+        }
+        drawRestaurantList(restaurantDistances, 0, false);
         Serial.println("Switching to mode1");
         state = MODE1;
-        break;
-      case Transition0:
-        lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
-        drawCursor(curs.x, curs.y, TFT_RED);
-        Serial.println("Switching to mode0");
-        state = MODE0;
         break;
     }
   }
