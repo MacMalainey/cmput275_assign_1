@@ -87,6 +87,8 @@ controlInput recordInput() {
   input.joyX = -1 * (analogRead(JOY_HORIZ) - JOY_CENTER);  // Input is reversed
   input.joyY = analogRead(JOY_VERT) - JOY_CENTER;
   input.joyButton = digitalRead(JOY_SEL);
+
+  // Input flags
   input.joyXMoved = true;
   input.joyYMoved = true;
 
@@ -128,6 +130,10 @@ void drawCursor(int x, int y, uint16_t colour) {
   tft.fillRect(x - CURSOR_SIZE / 2, y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE, colour);
 }
 
+/**
+ * Calculate the acceleration of the joystick
+ */
+
 inline float calculate_acceleration(int joystick_value) {
   // constant for the curve for the joystick's acceleration function.
   const float curve_constant = 1.2;
@@ -140,7 +146,7 @@ inline float calculate_acceleration(int joystick_value) {
     normalized = (float)(joystick_value - JOY_DEADZONE) / JOY_CENTER;
   }
 
-  return 8 * sin(curve_constant * normalized);
+  return 9 * sin(curve_constant * normalized);
 }
 
 /**
@@ -330,7 +336,6 @@ int main() {
 
     switch (state) {
       case MODE0:
-        // Process touch input
         if (input.isTouch && ((input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
                               (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
           drawRestaurantPoints(map.x, map.y, map.x + MAP_DISP_WIDTH, map.y + MAP_DISP_HEIGHT);
@@ -348,7 +353,6 @@ int main() {
             curs.x = MAP_DISP_WIDTH / 2;
             curs.y = MAP_DISP_HEIGHT / 2;
           } else {
-            // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
             // Redraw previous cursor placement
             lcd_image_draw(&yegImage, &tft, map.x + curs.x - CURSOR_SIZE / 2, map.y + curs.y - CURSOR_SIZE / 2,
                            curs.x - CURSOR_SIZE / 2, curs.y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE);
@@ -371,6 +375,7 @@ int main() {
         }
         break;
       case MODE1:
+
         if (input.joyYMoved) {
           // Update only when joyY used
           if (input.joyY < 0) {
@@ -383,6 +388,7 @@ int main() {
           listSelected = constrain(listSelected, 0, MENU_LIST_SIZE);
           drawRestaurantList(restaurantDistances, listSelected, true);
         }
+
         if (input.joyButton == false) {
           // Switch to mode0
           restaurant targetRestaurant;

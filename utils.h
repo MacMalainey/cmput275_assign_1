@@ -25,12 +25,13 @@ uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
 /**
  * Description:
  *
+ * https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
+ *
  * Arguments:
  *
  * Returns:
  */
 constexpr int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
-// https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
 
 /**
  * Swaps 2 restDist pointers
