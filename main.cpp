@@ -84,7 +84,7 @@ controlInput recordInput() {
   controlInput input;
 
   // Read joystick input
-  input.joyX = -1*(analogRead(JOY_HORIZ) - JOY_CENTER); // Input is reversed
+  input.joyX = -1 * (analogRead(JOY_HORIZ) - JOY_CENTER);  // Input is reversed
   input.joyY = analogRead(JOY_VERT) - JOY_CENTER;
   input.joyButton = digitalRead(JOY_SEL);
   input.joyXMoved = true;
@@ -350,12 +350,8 @@ int main() {
           } else {
             // TODO: we might want to just set this up as an lcd_image_draw function (Code size)
             // Redraw previous cursor placement
-            lcd_image_draw(&yegImage, &tft, 
-                            map.x + curs.x - CURSOR_SIZE / 2,
-                            map.y + curs.y - CURSOR_SIZE / 2,
-                            curs.x - CURSOR_SIZE / 2,
-                            curs.y - CURSOR_SIZE / 2,
-                            CURSOR_SIZE, CURSOR_SIZE);
+            lcd_image_draw(&yegImage, &tft, map.x + curs.x - CURSOR_SIZE / 2, map.y + curs.y - CURSOR_SIZE / 2,
+                           curs.x - CURSOR_SIZE / 2, curs.y - CURSOR_SIZE / 2, CURSOR_SIZE, CURSOR_SIZE);
             curs = nCurs;
             // Make certain the cursor doesn't move off screen
             curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
@@ -392,23 +388,35 @@ int main() {
           restaurant targetRestaurant;
           getRestaurant(restaurantDistances[listSelected].index, &targetRestaurant);
 
+          // Constrain lat and lon
+          targetRestaurant.lon = constrain(targetRestaurant.lon, LON_WEST, LON_EAST);
+          targetRestaurant.lat = constrain(targetRestaurant.lat, LAT_SOUTH, LAT_NORTH);
           // Set the right distance by converting from lat to lon and then finding the center
           cord restaurantCoord = {lon_to_x(targetRestaurant.lon), lat_to_y(targetRestaurant.lat)};
 
-          // Check if restaurant is within map.
-          if (restaurantCoord.x > map.x + MAP_DISP_WIDTH) {
-            curs.x = MAP_DISP_WIDTH;
+          map.x = constrain(restaurantCoord.x - (MAP_DISP_WIDTH / 2), 0, YEG_SIZE - MAP_DISP_WIDTH);
+          map.y = constrain(restaurantCoord.y - (MAP_DISP_HEIGHT / 2), 0, YEG_SIZE - MAP_DISP_HEIGHT);
+
+          if (map.x <= 0 || map.x >= (YEG_SIZE - MAP_DISP_WIDTH - 1)) {
+            // L or R edge of map
+            curs.x = restaurantCoord.x - map.x;
           } else {
             curs.x = MAP_DISP_WIDTH / 2;
-            map.x = restaurantCoord.x - (MAP_DISP_WIDTH / 2);
           }
 
-          if (restaurantCoord.y > map.y + MAP_DISP_HEIGHT) {
-            curs.y = MAP_DISP_HEIGHT;
+          if (map.y <= 0 || map.y >= (YEG_SIZE - MAP_DISP_HEIGHT - 1)) {
+            // top or bottom edge of map
+            curs.y = restaurantCoord.y - map.y;
           } else {
             curs.y = MAP_DISP_HEIGHT / 2;
-            map.y = restaurantCoord.y - (MAP_DISP_HEIGHT / 2);
           }
+
+          // Constrain cursors to screen
+          curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
+          curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
+
+          // Reset the list.
+          listSelected = 0;
 
           // Clear screen and draw map before switching to mode 0
           tft.fillScreen(TFT_BLACK);
