@@ -389,18 +389,26 @@ int main() {
         }
         if (input.joyButton == false) {
           // Switch to mode0
-
           restaurant targetRestaurant;
-
           getRestaurant(restaurantDistances[listSelected].index, &targetRestaurant);
 
           // Set the right distance by converting from lat to lon and then finding the center
-          map.y = lat_to_y(targetRestaurant.lat) - (MAP_DISP_HEIGHT / 2);
-          map.x = lon_to_x(targetRestaurant.lon) - (MAP_DISP_WIDTH / 2);
+          cord restaurantCoord = {lon_to_x(targetRestaurant.lon), lat_to_y(targetRestaurant.lat)};
 
-          // Set cursor to center
-          curs.x = MAP_DISP_WIDTH / 2;
-          curs.y = MAP_DISP_HEIGHT / 2;
+          // Check if restaurant is within map.
+          if (restaurantCoord.x > map.x + MAP_DISP_WIDTH) {
+            curs.x = MAP_DISP_WIDTH;
+          } else {
+            curs.x = MAP_DISP_WIDTH / 2;
+            map.x = restaurantCoord.x - (MAP_DISP_WIDTH / 2);
+          }
+
+          if (restaurantCoord.y > map.y + MAP_DISP_HEIGHT) {
+            curs.y = MAP_DISP_HEIGHT;
+          } else {
+            curs.y = MAP_DISP_HEIGHT / 2;
+            map.y = restaurantCoord.y - (MAP_DISP_HEIGHT / 2);
+          }
 
           // Clear screen and draw map before switching to mode 0
           tft.fillScreen(TFT_BLACK);
