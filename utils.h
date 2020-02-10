@@ -12,11 +12,11 @@ int16_t lon_to_x(int32_t lon) { return map(lon, LON_WEST, LON_EAST, 0, YEG_SIZE)
 int16_t lat_to_y(int32_t lat) { return map(lat, LAT_NORTH, LAT_SOUTH, 0, YEG_SIZE); }
 
 /**
- * Description:
+ * Calculates the manhattan distance between two points
  *
- * Arguments:
- *
- * Returns:
+ * @param restaurantInfo: The restaurant to calculate the distance to.
+ * @param center; The center of the screen right now.
+ * @return manhattan distance calculated.
  */
 uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
   return abs(center.x - lon_to_x(restaurantInfo->lon)) + abs(center.y - lat_to_y(restaurantInfo->lat));
@@ -32,12 +32,18 @@ uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
 constexpr int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
 // https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
 
+/**
+ * Swaps 2 restDist pointers
+ */
 void swap(restDist& a, restDist& b) {
   auto temp = a;
   a = b;
   b = temp;
 }
 
+/**
+ * Sorts a restDist array of length `length` using insertion sort.
+ */
 void isort(restDist* array, uint16_t length) {
   uint16_t i = 1;
   uint16_t j;

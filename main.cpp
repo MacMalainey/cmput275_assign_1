@@ -235,11 +235,10 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
 }
 
 /**
- * Description:
+ * Generates and sorts the list of restaurants
  *
- * Arguments:
- *
- * Returns:
+ * @param center: The center of the screen at the moment
+ * @param distanceArray: the array to store the results at.
  */
 void generateRestaurantList(cord center, restDist* distanceArray) {
   for (auto i = 0; i < NUM_RESTAURANTS; i++) {
@@ -253,11 +252,11 @@ void generateRestaurantList(cord center, restDist* distanceArray) {
 }
 
 /**
- * Description:
+ * Draws the restaurant list menu
  *
- * Arguments:
- *
- * Returns:
+ * @param restaurantArray: The array to draw out.
+ * @param selectedIndex: Index of the selected restaurant
+ * @param isUpdate: If it's an update, use a faster routine.
  */
 void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool isUpdate) {
   const uint8_t fontSize = 2;
@@ -337,15 +336,13 @@ int main() {
   lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
   drawCursor(curs.x, curs.y, TFT_RED);
 
-  cord nCurs = curs;
-
   while (true) {
     // Process joystick input
+    input = recordInput();
+    cord nCurs = processJoystick(input, curs);
 
     switch (state) {
       case MODE0:
-        input = recordInput();
-        nCurs = processJoystick(input, curs);
         // Process touch input
         if (input.isTouch && ((input.touchX > 0 && input.touchX < MAP_DISP_WIDTH) &&
                               (input.touchY > 0 && input.touchY < MAP_DISP_HEIGHT))) {
@@ -375,11 +372,17 @@ int main() {
           drawCursor(curs.x, curs.y, TFT_RED);
         }
         if (input.joyButton == false) {
-          state = Transition1;
+          // clear screen
+          tft.fillScreen(TFT_BLACK);
+
+          // Real location = map + local coord
+          cord realLocation = {curs.x + map.x, curs.y + map.y};
+          generateRestaurantList(realLocation, restaurantDistances);
+          drawRestaurantList(restaurantDistances, 0, false);
+          state = MODE1;
         }
         break;
       case MODE1:
-        input = recordInput();
         if (input.joyYMoved) {
           // Update only when joyY used
           if (input.joyY < 0) {
@@ -393,31 +396,26 @@ int main() {
           drawRestaurantList(restaurantDistances, listSelected, true);
         }
         if (input.joyButton == false) {
+          // Switch to mode0
+
           restaurant targetRestaurant;
+
           getRestaurant(restaurantDistances[listSelected].index, &targetRestaurant);
+
+          // Set the right distance by converting from lat to lon and then finding the center
           map.y = lat_to_y(targetRestaurant.lat) - (MAP_DISP_HEIGHT / 2);
           map.x = lon_to_x(targetRestaurant.lon) - (MAP_DISP_WIDTH / 2);
 
+          // Set cursor to center
           curs.x = MAP_DISP_WIDTH / 2;
           curs.y = MAP_DISP_HEIGHT / 2;
 
+          // Clear screen and draw map before switching to mode 0
+          tft.fillScreen(TFT_BLACK);
           lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
           drawCursor(curs.x, curs.y, TFT_RED);
           state = MODE0;
         }
-        break;
-      case Transition1:
-        // Switching to Mode1
-        // Clear screen
-        tft.fillScreen(TFT_BLACK);
-        {
-          // Real location = map + local coord
-          cord realLocation = {curs.x + map.x, curs.y + map.y};
-          generateRestaurantList(realLocation, restaurantDistances);
-        }
-        drawRestaurantList(restaurantDistances, 0, false);
-        Serial.println("Switching to mode1");
-        state = MODE1;
         break;
     }
   }

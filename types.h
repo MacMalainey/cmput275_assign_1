@@ -22,7 +22,7 @@ typedef struct {
 
 typedef struct {
   uint16_t index;  // index of restaurant from 0 to NUM_RESTAURANTS -1
-  uint16_t dist;   // Manhatten distance to cursor position
+  uint16_t dist;   // Manhattan distance to cursor position
 } restDist;
 
 typedef struct {
@@ -30,4 +30,4 @@ typedef struct {
   int y;
 } cord;
 
-enum mapState { MODE0, MODE1, Transition1 };
+enum mapState { MODE0, MODE1 };
