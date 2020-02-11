@@ -24,14 +24,20 @@ uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
 
 /**
  * Description:
- *
+ * Returns the direction (sign) of an integer that is outside of a given boundary
+ * EX: The args 3, 1, 2 would return +1 because (3) > 2; 1, 0, 2, would return 0 because 0 < 1 < 2
  * https://stackoverflow.com/questions/14579920/fast-sign-of-integer-in-c
  *
  * Arguments:
+ * x (int): Number to check if within boundaries
+ * min (int): Minimum boundary
+ * max (int): Maximum boundary
  *
  * Returns:
+ * sign (int): Direction of x if x is outside of bounds (otherwise returns 0)
+ * 
  */
-constexpr int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
+int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
 
 /**
  * Swaps 2 restDist pointers
