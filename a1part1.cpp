@@ -260,24 +260,27 @@ void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool is
   for (auto i = 0; i < MENU_LIST_SIZE; i++) {
     restaurant currentRestaurant;
     getRestaurant(restaurantArray[i].index, &currentRestaurant);
+
     tft.setCursor(0, i * 15);
 
+    auto name = currentRestaurant.name;
     if (isUpdate) {
       if (i == selectedIndex) {
         tft.setTextColor(TFT_BLACK, TFT_WHITE);
-        tft.print(currentRestaurant.name);
       } else if (i == selectedIndex - 1 || i == selectedIndex + 1) {
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        tft.print(currentRestaurant.name);
+      } else {
+        name = "";
       }
+
     } else {
       if (i == selectedIndex) {
         tft.setTextColor(TFT_BLACK, TFT_WHITE);
       } else {
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
       }
-      tft.print(currentRestaurant.name);
     }
+    tft.print(name);
   }
 }
 
