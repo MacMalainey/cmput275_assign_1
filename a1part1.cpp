@@ -255,22 +255,20 @@ void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool is
   const uint8_t fontSize = 2;
 
   tft.setTextSize(fontSize);
-  tft.setCursor(0, 0);
   tft.setTextWrap(false);
 
   for (auto i = 0; i < MENU_LIST_SIZE; i++) {
     restaurant currentRestaurant;
     getRestaurant(restaurantArray[i].index, &currentRestaurant);
+    tft.setCursor(0, i * 15);
 
     if (isUpdate) {
       if (i == selectedIndex) {
         tft.setTextColor(TFT_BLACK, TFT_WHITE);
-        tft.println(currentRestaurant.name);
+        tft.print(currentRestaurant.name);
       } else if (i == selectedIndex - 1 || i == selectedIndex + 1) {
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        tft.println(currentRestaurant.name);
-      } else {
-        tft.println();
+        tft.print(currentRestaurant.name);
       }
     } else {
       if (i == selectedIndex) {
@@ -278,7 +276,7 @@ void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool is
       } else {
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
       }
-      tft.println(currentRestaurant.name);
+      tft.print(currentRestaurant.name);
     }
   }
 }
@@ -385,7 +383,7 @@ int main() {
             // Go down list
             listSelected++;
           }
-          listSelected = constrain(listSelected, 0, MENU_LIST_SIZE);
+          listSelected = constrain(listSelected, 0, (MENU_LIST_SIZE - 1));
           drawRestaurantList(restaurantDistances, listSelected, true);
         }
 
