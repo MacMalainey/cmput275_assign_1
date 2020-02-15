@@ -31,3 +31,4 @@ struct cord {
 };
 
 enum mapState { MODE0, MODE1 };
+enum sortMode { QSORT, ISORT, BOTH };
