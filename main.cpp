@@ -34,6 +34,8 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 Sd2Card card;
 
+const uint8_t MENU_DISPLAY_SIZE = 21;
+
 void setup() {
   init();
 
@@ -234,12 +236,18 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
  * @param center: The center of the screen at the moment
  * @param distanceArray: the array to store the results at.
  */
-void generateRestaurantList(cord center, restDist* distanceArray) {
-  for (auto i = 0; i < NUM_RESTAURANTS; i++) {
+void generateRestaurantList(cord center, restDist* distanceArray, uint8_t minRating,
+                            void (*sort_fn)(restDist*, uint16_t)) {
+  uint16_t arrayIndex = 0;
+
+  for (uint16_t i = 0; i < NUM_RESTAURANTS; i++) {
     restaurant currentRestaurant;
     getRestaurant(i, &currentRestaurant);
     auto distance = calculateManhattan(&currentRestaurant, center);
-    distanceArray[i] = {i, distance};
+    if (max((currentRestaurant.rating + 1) / 2, 1) >= minRating) {
+      distanceArray[arrayIndex] = {i, distance};
+      arrayIndex++;
+    }
   }
 
   isort(distanceArray, NUM_RESTAURANTS);
@@ -252,30 +260,42 @@ void generateRestaurantList(cord center, restDist* distanceArray) {
  * @param selectedIndex: Index of the selected restaurant
  * @param isUpdate: If it's an update, use a faster routine.
  */
-void drawRestaurantList(restDist* restaurantArray, int8_t selectedIndex, bool isUpdate) {
+void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex, uint8_t menuPage, bool isUpdate) {
+  selectedIndex %= MENU_DISPLAY_SIZE;
+
+  if (!isUpdate) {
+    tft.fillScreen(TFT_BLACK);
+  }
+
   tft.setTextWrap(false);
 
-  for (auto i = 0; i < MENU_LIST_SIZE; i++) {
+  for (auto i = 0; i < MENU_DISPLAY_SIZE; i++) {
+    uint16_t restaurantIndex = (menuPage * MENU_DISPLAY_SIZE) + i;
+    Serial.println(restaurantIndex);
     restaurant currentRestaurant;
-    getRestaurant(restaurantArray[i].index, &currentRestaurant);
+    getRestaurant(restaurantArray[restaurantIndex].index, &currentRestaurant);
 
     tft.setCursor(0, i * 15);
 
-    auto name = currentRestaurant.name;
-
     if (i == selectedIndex) {
       tft.setTextColor(TFT_BLACK, TFT_WHITE);
-    } else if (isUpdate) {
-      if (i == selectedIndex - 1 || i == selectedIndex + 1) {
-        tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      } else {
-        name = "";
-      }
+      tft.print(currentRestaurant.name);
     } else {
       tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      if (isUpdate) {
+        if (i == selectedIndex - 1 || i == selectedIndex + 1) {
+          tft.print(currentRestaurant.name);
+        } else {
+          tft.print("");
+        }
+      } else {
+        tft.print(currentRestaurant.name);
+      }
     }
-    tft.print(name);
   }
+  // Clean up after yourself to be nice
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextWrap(true);
 }
 
 /**
@@ -296,32 +316,30 @@ void drawRestaurantPoints(int xLower, int yLower, int xUpper, int yUpper, uint8_
     int x = lon_to_x(rest.lon);
     int y = lat_to_y(rest.lat);
 
-    if ((x >= xLower && x <= xUpper) && (y >= yLower && y <= yUpper) &&
-        max((rest.rating + 1) / 2, 1) >= minRate) {
+    if ((x >= xLower && x <= xUpper) && (y >= yLower && y <= yUpper) && max((rest.rating + 1) / 2, 1) >= minRate) {
       tft.fillCircle(x - xLower, y - yLower, 4, TFT_PURPLE);
     }
   }
 }
 
 void drawButton(int x, int y, const char* text) {
-  const int BORDER = 2; // BUTTON COLOUR BORDER
+  const int BORDER = 2;  // BUTTON COLOUR BORDER
   const int Y_DISPLACE = 16;
   uint8_t length = strlen(text);
   tft.fillRect(x, y, DISPLAY_WIDTH - MAP_DISP_WIDTH, (DISPLAY_HEIGHT / 2), TFT_BLUE);
-  tft.fillRect(x + BORDER, y + BORDER,
-               DISPLAY_WIDTH - MAP_DISP_WIDTH - (2 * BORDER), (DISPLAY_HEIGHT / 2) - (2 * BORDER), TFT_WHITE);
-  
+  tft.fillRect(x + BORDER, y + BORDER, DISPLAY_WIDTH - MAP_DISP_WIDTH - (2 * BORDER),
+               (DISPLAY_HEIGHT / 2) - (2 * BORDER), TFT_WHITE);
+
   tft.setTextColor(TFT_BLACK);
 
   for (uint8_t i = 0; i < length; i++) {
-    tft.setCursor(x + (DISPLAY_WIDTH - MAP_DISP_WIDTH)/2 - 3, y + (Y_DISPLACE * i) +
-                  (DISPLAY_HEIGHT / 4) - ((length * 16) / 2));
+    tft.setCursor(x + (DISPLAY_WIDTH - MAP_DISP_WIDTH) / 2 - 3,
+                  y + (Y_DISPLACE * i) + (DISPLAY_HEIGHT / 4) - ((length * 16) / 2));
     tft.print(text[i]);
   }
 
   // Reset text size and Colour
   tft.setTextColor(TFT_WHITE);
-  
 }
 
 int main() {
@@ -340,7 +358,8 @@ int main() {
   restDist restaurantDistances[NUM_RESTAURANTS];
   sortMode sort = QSORT;
   uint8_t minRating = 1;
-  int8_t listSelected = 0;
+  int16_t listSelected = 0;
+  uint16_t oldPage = 0;
 
   // initial cursor position is the middle of the screen
   curs.x = MAP_DISP_WIDTH / 2;
@@ -370,22 +389,22 @@ int main() {
             // Handle if touched the map
             drawRestaurantPoints(map.x, map.y, map.x + MAP_DISP_WIDTH, map.y + MAP_DISP_HEIGHT, minRating);
           } else if ((input.touchX < DISPLAY_WIDTH && input.touchX > MAP_DISP_WIDTH) &&
-                    (input.touchY > 0 && input.touchY < DISPLAY_HEIGHT / 2)) {
+                     (input.touchY > 0 && input.touchY < DISPLAY_HEIGHT / 2)) {
             // Handle if touched the sort button
-            sort = (sort + 1) % 3;
+            sort = (sortMode)((sort + 1) % 3);
             switch (sort) {
               case QSORT:
-              drawButton(MAP_DISP_WIDTH, 0, QSORT_TEXT);
-              break;
+                drawButton(MAP_DISP_WIDTH, 0, QSORT_TEXT);
+                break;
               case ISORT:
-              drawButton(MAP_DISP_WIDTH, 0, ISORT_TEXT);
-              break;
+                drawButton(MAP_DISP_WIDTH, 0, ISORT_TEXT);
+                break;
               case BOTH:
-              drawButton(MAP_DISP_WIDTH, 0, BSORT_TEXT);
-              break;
+                drawButton(MAP_DISP_WIDTH, 0, BSORT_TEXT);
+                break;
             }
           } else if ((input.touchX < DISPLAY_WIDTH && input.touchX > MAP_DISP_WIDTH) &&
-                    (input.touchY > DISPLAY_HEIGHT / 2 && input.touchY < DISPLAY_HEIGHT)) {
+                     (input.touchY > DISPLAY_HEIGHT / 2 && input.touchY < DISPLAY_HEIGHT)) {
             // Handle if touched the rating button
             minRating = (minRating % 5) + 1;
             char msg[] = "0 STARS";
@@ -422,8 +441,28 @@ int main() {
 
           // Real location = map + local coord
           cord realLocation = {curs.x + map.x, curs.y + map.y};
-          generateRestaurantList(realLocation, restaurantDistances);
-          drawRestaurantList(restaurantDistances, 0, false);
+          auto time = millis();
+          switch (sort) {
+            case QSORT:
+              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              Serial.print(QSORT_TEXT);
+              break;
+            case ISORT:
+              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              Serial.print(ISORT_TEXT);
+              break;
+            case BOTH:
+              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              Serial.print(BSORT_TEXT);
+              break;
+          }
+          Serial.print(" running time: ");
+          Serial.print(millis() - time);
+          Serial.println(" ms");
+
+          drawRestaurantList(restaurantDistances, 0, 0, false);
+
           state = MODE1;
         }
         break;
@@ -438,8 +477,10 @@ int main() {
             // Go down list
             listSelected++;
           }
-          listSelected = constrain(listSelected, 0, (MENU_LIST_SIZE - 1));
-          drawRestaurantList(restaurantDistances, listSelected, true);
+          listSelected = constrain(listSelected, 0, (NUM_RESTAURANTS - 1));
+          uint16_t newPage = listSelected / MENU_DISPLAY_SIZE;
+          drawRestaurantList(restaurantDistances, listSelected, newPage, oldPage == newPage);
+          oldPage = newPage;
         }
 
         if (input.joyButton == false) {
@@ -474,24 +515,25 @@ int main() {
           curs.x = constrain(curs.x, CURSOR_SIZE / 2, MAX_CURSOR_X);
           curs.y = constrain(curs.y, CURSOR_SIZE / 2, MAX_CURSOR_Y);
 
-          // Reset the list.
+          // Reset the restaurant list.
           listSelected = 0;
+          oldPage = 0;
 
           // Clear screen and draw map and buttons before switching to mode 0
           tft.fillScreen(TFT_BLACK);
           lcd_image_draw(&yegImage, &tft, map.x, map.y, 0, 0, MAP_DISP_WIDTH, MAP_DISP_HEIGHT);
           drawCursor(curs.x, curs.y, TFT_RED);
           switch (sort) {
-              case QSORT:
+            case QSORT:
               drawButton(MAP_DISP_WIDTH, 0, QSORT_TEXT);
               break;
-              case ISORT:
+            case ISORT:
               drawButton(MAP_DISP_WIDTH, 0, ISORT_TEXT);
               break;
-              case BOTH:
+            case BOTH:
               drawButton(MAP_DISP_WIDTH, 0, BSORT_TEXT);
               break;
-            }
+          }
           char msg[] = "0 STARS";
           msg[0] += minRating;
           drawButton(MAP_DISP_WIDTH, DISPLAY_HEIGHT / 2, msg);
