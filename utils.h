@@ -35,7 +35,7 @@ uint16_t calculateManhattan(restaurant* restaurantInfo, cord center) {
  *
  * Returns:
  * sign (int): Direction of x if x is outside of bounds (otherwise returns 0)
- * 
+ *
  */
 int thresholdSign(int x, int min, int max) { return (x > max) - (x < min); }
 
@@ -46,6 +46,34 @@ void swap(restDist& a, restDist& b) {
   auto temp = a;
   a = b;
   b = temp;
+}
+
+void quicksort(restDist array[], uint16_t length) {
+  if (length <= 1) {
+    return;
+  }
+
+  int16_t pi = (length + 1) / 2;
+
+  swap(array[pi], array[length - 1]);
+
+  int16_t low = 0;
+  int16_t high = length - 2;
+
+  while (!(low > high)) {
+    if (array[low].dist <= array[length - 1].dist) {
+      low++;
+    } else if (array[high].dist > array[length - 1].dist) {
+      high--;
+    } else {
+      swap(array[low], array[high]);
+    }
+  }
+
+  swap(array[low], array[length - 1]);
+
+  quicksort(array, low);
+  quicksort(array + low, length - low);
 }
 
 /**

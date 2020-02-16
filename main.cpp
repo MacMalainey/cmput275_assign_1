@@ -271,7 +271,6 @@ void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex, uint8_
 
   for (auto i = 0; i < MENU_DISPLAY_SIZE; i++) {
     uint16_t restaurantIndex = (menuPage * MENU_DISPLAY_SIZE) + i;
-    Serial.println(restaurantIndex);
     restaurant currentRestaurant;
     getRestaurant(restaurantArray[restaurantIndex].index, &currentRestaurant);
 
@@ -444,7 +443,7 @@ int main() {
           auto time = millis();
           switch (sort) {
             case QSORT:
-              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              generateRestaurantList(realLocation, restaurantDistances, minRating, quicksort);
               Serial.print(QSORT_TEXT);
               break;
             case ISORT:
@@ -452,7 +451,7 @@ int main() {
               Serial.print(ISORT_TEXT);
               break;
             case BOTH:
-              generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              generateRestaurantList(realLocation, restaurantDistances, minRating, quicksort);
               generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
               Serial.print(BSORT_TEXT);
               break;
