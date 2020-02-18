@@ -238,8 +238,7 @@ void getRestaurant(int restIndex, restaurant* restPtr) {
  *
  * @return usable size of sorted array
  */
-uint16_t generateRestaurantList(cord center, restDist* distanceArray, uint8_t minRating,
-                                void (*sort_fn)(restDist*, uint16_t)) {
+uint16_t generateRestaurantList(cord center, restDist* distanceArray, uint8_t minRating) {
   uint16_t arrayIndex = 0;
 
   for (uint16_t i = 0; i < NUM_RESTAURANTS; i++) {
@@ -252,7 +251,6 @@ uint16_t generateRestaurantList(cord center, restDist* distanceArray, uint8_t mi
     }
   }
 
-  sort_fn(distanceArray, arrayIndex);
   return arrayIndex;
 }
 
@@ -275,6 +273,10 @@ void drawRestaurantList(restDist* restaurantArray, uint8_t selectedIndex, uint8_
 
   for (auto i = 0; i < MENU_DISPLAY_SIZE; i++) {
     uint16_t restaurantIndex = (menuPage * MENU_DISPLAY_SIZE) + i;
+    if (restaurantIndex >= arraySize) {
+      // Stop rendering if restaurant index is past the last restaurant.
+      return;
+    }
     restaurant currentRestaurant;
     getRestaurant(restaurantArray[restaurantIndex].index, &currentRestaurant);
 
@@ -442,40 +444,44 @@ int main() {
         if (input.joyButton == false) {
           // clear screen
           tft.fillScreen(TFT_BLACK);
+          unsigned long time;
 
           // Real location = map + local coord
           cord realLocation = {curs.x + map.x, curs.y + map.y};
-          auto time = millis();
           switch (sort) {
             case QSORT:
-              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating, quicksort);
+              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+              time = millis();
+              quicksort(restaurantDistances, ratedArraySize);
               time = millis() - time;
               Serial.print(QSORT_TEXT);
               break;
             case ISORT:
-              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
+              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+              time = millis();
+              isort(restaurantDistances, ratedArraySize);
               time = millis() - time;
               Serial.print(ISORT_TEXT);
               break;
             case BOTH:
-              generateRestaurantList(realLocation, restaurantDistances, minRating, quicksort);
-
+              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+              time = millis();
+              quicksort(restaurantDistances, ratedArraySize);
               time = millis() - time;
               Serial.print(QSORT_TEXT);
               Serial.print(" running time: ");
               Serial.print(time);
               Serial.println(" ms");
-
+              generateRestaurantList(realLocation, restaurantDistances, minRating);
               time = millis();
-              ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating, isort);
-              time = millis() - time;
+              isort(restaurantDistances, ratedArraySize);
               Serial.print(ISORT_TEXT);
               break;
           }
           Serial.print(" running time: ");
           Serial.print(time);
           Serial.println(" ms");
-
+          Serial.println(ratedArraySize);
           drawRestaurantList(restaurantDistances, 0, 0, false, ratedArraySize);
 
           state = MODE1;
@@ -492,7 +498,8 @@ int main() {
             // Go down list
             listSelected++;
           }
-          listSelected = constrain(listSelected, 0, (NUM_RESTAURANTS - 1));
+          listSelected = constrain(listSelected, 0, (ratedArraySize - 1));
+
           uint16_t newPage = listSelected / MENU_DISPLAY_SIZE;
           drawRestaurantList(restaurantDistances, listSelected, newPage, oldPage == newPage, ratedArraySize);
           oldPage = newPage;
