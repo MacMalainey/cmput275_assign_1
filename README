@@ -22,6 +22,16 @@ Compiling and Running Instructions:
   4. Run make upload
   5. Once map and cursor load use joystick and touch controls
 
+Included Files:
+  - README
+  - Makefile
+  - types.h
+  - utils.h
+  - main.cpp
+  - lcd_image.h
+  - lcd_image.cpp
+  - config.h
+
 References:
 A lot of the code in this assignment was taken from previous weekly problems where applicable.
 The threshold sign function was base on the following stack exchange post:
