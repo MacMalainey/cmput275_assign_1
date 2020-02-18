@@ -458,28 +458,37 @@ int main() {
           switch (sort) {
             case QSORT:
               ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+
               time = millis();
               quicksort(restaurantDistances, ratedArraySize);
               time = millis() - time;
+
               Serial.print(QSORT_TEXT);
               break;
             case ISORT:
               ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+
               time = millis();
               isort(restaurantDistances, ratedArraySize);
               time = millis() - time;
+
               Serial.print(ISORT_TEXT);
               break;
             case BOTH:
               ratedArraySize = generateRestaurantList(realLocation, restaurantDistances, minRating);
+
               time = millis();
               quicksort(restaurantDistances, ratedArraySize);
               time = millis() - time;
+
               Serial.print(QSORT_TEXT);
               Serial.print(" running time: ");
               Serial.print(time);
               Serial.println(" ms");
+
+              // Regenerate restaurant list for a fair sort comparison.
               generateRestaurantList(realLocation, restaurantDistances, minRating);
+
               time = millis();
               isort(restaurantDistances, ratedArraySize);
               Serial.print(ISORT_TEXT);
