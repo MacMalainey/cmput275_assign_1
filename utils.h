@@ -48,6 +48,14 @@ void swap(restDist& a, restDist& b) {
   b = temp;
 }
 
+/**
+ * Sorts a restDist array of length `length` using quick sort.
+ *
+ * qsort is a function in stdlib.h, so we opted to name this quicksort instead.
+ * Pivot function is included in this function as a sort of pseudo optimization
+ * (reduce function call depth ever so slightly)
+ * Initial pivot determined by trial and error.
+ */
 void quicksort(restDist array[], uint16_t length) {
   if (length <= 1) {
     return;

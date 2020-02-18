@@ -135,8 +135,8 @@ void drawCursor(int x, int y, uint16_t colour) {
 
 /**
  * Calculate the acceleration of the joystick
+ * @param joystick_value: the analogue value of the joystick.
  */
-
 inline float calculate_acceleration(int joystick_value) {
   // constant for the curve for the joystick's acceleration function.
   const float curve_constant = 1.2;
@@ -327,6 +327,13 @@ void drawRestaurantPoints(int xLower, int yLower, int xUpper, int yUpper, uint8_
   }
 }
 
+/**
+ * Draws the buttons on the right side of the screen.
+ *
+ * @param x: The x coordinate to start drawing the button at
+ * @param y: The y coordinate to start drawing the button at
+ * @param text: The cstring to print out.
+ */
 void drawButton(int x, int y, const char* text) {
   const int BORDER = 2;  // BUTTON COLOUR BORDER
   const int Y_DISPLACE = 16;
@@ -481,7 +488,6 @@ int main() {
           Serial.print(" running time: ");
           Serial.print(time);
           Serial.println(" ms");
-          Serial.println(ratedArraySize);
           drawRestaurantList(restaurantDistances, 0, 0, false, ratedArraySize);
 
           state = MODE1;
